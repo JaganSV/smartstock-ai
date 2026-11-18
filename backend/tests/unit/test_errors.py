@@ -64,9 +64,9 @@ def test_unknown_route_uses_envelope(client: TestClient) -> None:
 
 def test_settings_do_not_expose_secrets() -> None:
     settings = Settings(
-        postgres_password="pg-super-secret",  # type: ignore[arg-type]
-        jwt_secret="jwt-super-secret-value",  # type: ignore[arg-type]
-        watsonx_api_key="wx-super-secret",  # type: ignore[arg-type]
+        postgres_password="pg-super-secret",
+        jwt_secret="jwt-super-secret-value",
+        watsonx_api_key="wx-super-secret",
     )
     for rendered in (repr(settings), str(settings)):
         assert "pg-super-secret" not in rendered
@@ -78,8 +78,8 @@ def test_settings_do_not_expose_secrets() -> None:
 
 def test_missing_watsonx_settings_do_not_block_startup() -> None:
     settings = Settings(
-        postgres_password="x",  # type: ignore[arg-type]
-        jwt_secret="y",  # type: ignore[arg-type]
+        postgres_password="x",
+        jwt_secret="y",
         _env_file=None,
     )
     assert settings.watsonx_api_key is None
@@ -88,7 +88,7 @@ def test_missing_watsonx_settings_do_not_block_startup() -> None:
 def test_wildcard_cors_rejected() -> None:
     with pytest.raises(ValidationError):
         Settings(
-            postgres_password="x",  # type: ignore[arg-type]
-            jwt_secret="y",  # type: ignore[arg-type]
+            postgres_password="x",
+            jwt_secret="y",
             cors_allowed_origins="*",
         )

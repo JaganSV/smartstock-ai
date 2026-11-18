@@ -21,7 +21,7 @@ class _FailingSession:
 
 def _override(app: FastAPI, session: object) -> None:
     def _get_db() -> Iterator[Session]:
-        yield session  # type: ignore[misc]
+        yield session
 
     app.dependency_overrides[get_db] = _get_db
 

@@ -73,6 +73,33 @@ Base images (Docker, not run): `postgres:16`, `python:3.12-slim`, `node:lts-slim
 
 ### Known items
 
-- `npm install` reports 17 vulnerabilities (5 moderate, 10 high, 2 critical). `npm audit fix --force` was not run (it makes breaking changes outside P0 scope). To be reviewed before P10.
 - `npm` warns that `esbuild@0.21.5` has a postinstall script not covered by `allowScripts`; the dev server and tests work.
-- pytest shows a `StarletteDeprecationWarning` from `fastapi.testclient` (httpx vs httpx2). Not suppressed; no pin changed.
+
+### C3: npm audit summary (BOB-P1-01, 2026-11-18; nothing upgraded)
+
+The P0 report quoted 17 vulnerabilities. `npm audit` now reports **8 (2 critical, 1 high, 5 moderate)**; the advisory database changed and the lock file did not. `npm audit --omit=dev` reports **2 moderate** (both runtime). Architect decides by P4.
+
+| Package | Severity | Runtime or dev-only | Vulnerable range | Fix offered by npm (all semver-major) | Advisories |
+| --- | --- | --- | --- | --- | --- |
+| vitest | critical | dev-only | <=4.1.10 | vitest@5.1.1 | GHSA-5xrq-8626-4rwp, GHSA-82fw-gwwq-j7x9 |
+| tinypool | critical | dev-only | <=2.1.1 | vitest@5.1.1 | GHSA-5gmw-xhrv-c9v3, GHSA-85c8-ppgw-ccpr |
+| vite | high | dev-only | <=6.4.3 | vite@8.3.8 | 8 advisories, e.g. GHSA-4w7w-66w2-5vf9 (path traversal in optimized deps `.map` handling) |
+| esbuild | moderate | dev-only | <=0.24.2 | vite@8.3.8 | GHSA-67mh-4wv8-2f99 (dev server accepts requests from any website) |
+| @vitest/mocker | moderate | dev-only | <=4.1.11 | vitest@5.1.1 | GHSA-82fw-gwwq-j7x9, GHSA-qxg6-89mg-rqv8 |
+| vite-node | moderate | dev-only | <=2.2.0-beta.2 | vitest@5.1.1 | via vitest/vite |
+| react-router | moderate | runtime | 6.0.0 - 7.17.0 | react-router-dom@7.18.6 | GHSA-wrjc-x8rr-h8h6 (open redirect), GHSA-337j-9hxr-rhxg (constructor injection in SSR hydration) |
+| react-router-dom | moderate | runtime | 6.0.0-alpha.0 - 7.17.0 | react-router-dom@7.18.6 | via react-router |
+
+Notes: all the critical and high findings are in the test/dev toolchain (Vitest, Vite) and affect developer machines running dev servers. The two runtime findings are in React Router. The SSR hydration advisory does not apply (client-side SPA only). The open-redirect advisory concerns `<Link>`/`useNavigate` with untrusted URLs. Every fix is a major-version bump (Vitest 5, Vite 8, React Router 7), so none was applied.
+
+### C4: Starlette/httpx deprecation warning in pytest
+
+Full text:
+
+```
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  ...\backend\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+```
+
+Source: `starlette/testclient.py` (Starlette 1.10.0) tries `import httpx2` first and, if missing, falls back to `httpx` and emits this warning. `fastapi.testclient` re-exports Starlette's `TestClient`, so the warning fires on import. The only real fix is to add `httpx2` as a dev dependency (a new package, outside the pinned set), so it is **not fixed** and is recorded here. Suppressing it with a `filterwarnings` entry was not done, to avoid hiding future deprecations. Proposal for the architect: swap `httpx==0.28.1` for `httpx2` in the dev extras once a version is approved.
