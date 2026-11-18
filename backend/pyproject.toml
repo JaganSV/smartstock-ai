@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smartstock-backend"
+version = "0.1.0"
+description = "SmartStock AI backend (FastAPI modular monolith)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi==0.163.1",
+    "uvicorn[standard]==0.54.0",
+    "pydantic==2.14.3",
+    "pydantic-settings==2.16.3",
+    "sqlalchemy==2.1.9",
+    "alembic==1.20.1",
+    "psycopg[binary]==3.3.9",
+    "pandas==3.1.1",
+    "numpy==2.5.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.2.0",
+    "pytest-cov==7.1.0",
+    "httpx==0.28.1",
+    "ruff==0.17.5",
+    "mypy==2.4.1",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --cov=app --cov-report=term-missing"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+
+[tool.ruff.lint.isort]
+# The local ./alembic migrations folder must not shadow the third-party package.
+known-third-party = ["alembic"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.mypy]
+files = ["app"]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["pandas", "pandas.*", "numpy", "numpy.*"]
+ignore_missing_imports = true
