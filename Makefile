@@ -1,6 +1,6 @@
 SHELL := bash
 
-.PHONY: up down logs db-create migrate dev-backend dev-frontend test test-backend test-frontend lint lint-backend lint-frontend secret-scan typecheck typecheck-backend typecheck-frontend format seed eval
+.PHONY: up down logs db-create migrate dev-backend dev-frontend test test-unit test-backend test-frontend lint lint-backend lint-frontend secret-scan typecheck typecheck-backend typecheck-frontend format seed eval
 
 # Host (native) Python from the Python 3.12 venv; Git Bash path style.
 VENV := .venv/Scripts
@@ -41,6 +41,10 @@ test: test-backend test-frontend
 
 test-backend:
 	cd backend && $(VENV)/python -m pytest
+
+# Unit tests only (no database needed).
+test-unit:
+	cd backend && $(VENV)/python -m pytest -m "not integration"
 
 test-frontend:
 	cd frontend && npm run test

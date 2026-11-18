@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     postgres_db: str = "smartstock"
     postgres_host: str = "db"
     postgres_port: int = 5432
+    # Integration-test database URL (contains the password, hence SecretStr). Optional.
+    test_database_url: SecretStr | None = None
 
     # Backend
     app_env: str = "local"

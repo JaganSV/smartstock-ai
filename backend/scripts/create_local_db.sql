@@ -11,3 +11,8 @@ WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'smartstock')
 SELECT 'CREATE DATABASE smartstock OWNER smartstock'
 WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'smartstock')
 \gexec
+
+-- Dedicated database for integration tests (BOB-P1-01). Same owner; no extensions.
+SELECT 'CREATE DATABASE smartstock_test OWNER smartstock'
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'smartstock_test')
+\gexec

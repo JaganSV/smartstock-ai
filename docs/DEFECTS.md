@@ -1,6 +1,6 @@
 # Defects
 
-Defects found and fixed during BOB-P0-01-R2 validation runs.
+Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01).
 
 | ID | Phase | Description | Fix | File |
 | --- | --- | --- | --- | --- |
@@ -8,3 +8,9 @@ Defects found and fixed during BOB-P0-01-R2 validation runs.
 | D-P0-002 | P0 | `make typecheck`: mypy strict error `Argument "headers" to "_error_response" has incompatible type "Mapping[str, str] | None"; expected "dict[str, str] | None"`. | Widened the parameter type to `Mapping[str, str] | None`. | `backend/app/core/errors.py` |
 | D-P0-003 | P0 | `make migrate` from `backend/` failed: `Settings` read `.env` relative to the working directory, so `postgres_password` and `jwt_secret` were reported missing (`.env` is at the repo root). | Resolve `.env` from the repo root via `Path(__file__)`. | `backend/app/core/config.py` |
 | D-P0-004 | P0 | `make lint`: ruff `I001` (import block not formatted) after the D-P0-003 edit. | `ruff check --fix` / `ruff format`. | `backend/app/core/config.py` |
+| D-P1-001 | P1 | mypy strict: `levels_with_policies` return type did not match `Row[...]` generics. | Return a plain `list[tuple[InventoryLevel, InventoryPolicy | None]]`. | `backend/app/repositories/inventory.py` |
+| D-P1-002 | P1 | mypy strict: `Result.rowcount` is not on the typed `Result`, so `set_feedback` needed a `type: ignore`. | Reimplemented `set_feedback` via `get()` and attribute assignment plus flush (no ignore needed). | `backend/app/repositories/ai_interactions.py` |
+| D-P1-003 | P1 | Spec requires an index on `audit_log (occurred_at)`; the first autogenerate had only `(entity_type, entity_id)` and `user_id`. | Added `ix_audit_log_occurred_at` to the model and the reviewed migration. | `backend/app/models/governance.py`, `backend/alembic/versions/0001_core_schema.py` |
+| D-P1-004 | P1 | Test bug: the insert-only API test counted the class attribute `model` as a public method. | List only functions (`inspect.getmembers(..., isfunction)`). | `backend/tests/integration/test_repositories.py` |
+| D-P1-005 | P1 | Alembic `DeprecationWarning`: no `path_separator` in `alembic.ini`. | Added `path_separator = os`. | `backend/alembic.ini` |
+| D-P1-006 | P1 | ruff E501 on a long docstring line in the integration conftest. | Shortened the docstring. | `backend/tests/integration/conftest.py` |

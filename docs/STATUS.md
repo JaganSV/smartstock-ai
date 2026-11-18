@@ -1,5 +1,31 @@
 # Project Status
 
+## Phase P1 (part 1): Database schema, migrations and repositories (BOB-P1-01)
+
+**Status: implemented; validation output is in the BOB-P1-01 report.** Seed data is BOB-P1-02 and is not started.
+
+- Alembic head: `0001_core_schema` (17 tables plus `alembic_version`). `document_chunks` and the `vector` extension are absent (ADR-014).
+- Databases: `smartstock` (dev) and `smartstock_test` (integration tests), both owned by `smartstock`.
+- No new dependencies; pins unchanged.
+
+### BP §5 clarifications
+
+These are clarifications from BP §9.2, not design changes (recorded as required by BOB-P1-01 §7.3):
+
+- `documents.status` (`UPLOADED`/`INDEXED`/`FAILED`, default `UPLOADED`).
+- `documents.injection_warning` (boolean, default false).
+
+### Interpretations made in BOB-P1-01 (for architect confirmation)
+
+- Columns are NOT NULL unless §7.3 says `null`/`null allowed`. This was applied to columns whose nullability the table did not state (for example `product_metrics.*`, `inventory_levels.as_of`).
+- `approval_decisions.decision` and similar columns with a CHECK but no stated default are NOT NULL with no default.
+- `ai_interactions.validation_status` and `feature` are NOT NULL.
+- `audit_log` has an index on `occurred_at` and one on `(entity_type, entity_id)` (spec: `index on (occurred_at), (entity_type, entity_id)`), plus `user_id` (every FK is indexed).
+- `sales_daily`: besides the PK `(product_id, warehouse_id, sale_date)` and the required `sale_date` index, `warehouse_id` has its own index (FK rule).
+- `UNIQUE` constraint names follow the requested convention (`uq_<table>_<first column>`), so `UNIQUE(product_id, warehouse_id)` is named `uq_inventory_levels_product_id`.
+- `AiInteractionRepository.set_feedback` returns `True`/`False` (row found or not) and flushes; it does not commit.
+- Every table is mapped without ORM `relationship()` objects (thin layer; joins are explicit queries).
+
 ## Phase P0: Foundation & scaffolding (BOB-P0-01 / BOB-P0-01-R2)
 
 **Status: P0 gate passed on the native toolchain, except the items below that are explicitly NOT RUN.**

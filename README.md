@@ -21,10 +21,12 @@ pgvector is deferred to P7 (ADR-014); do not install it now.
 ## Quick start (native Windows)
 
 ```bash
-# 1. Configuration (set POSTGRES_PASSWORD and JWT_SECRET in .env; it is git-ignored)
+# 1. Configuration. Set POSTGRES_PASSWORD, JWT_SECRET and the password inside TEST_DATABASE_URL
+#    in .env (git-ignored)
 cp .env.example .env
 
-# 2. Create the local DB role and database (asks for the PostgreSQL superuser password)
+# 2. Create the local DB role and the smartstock and smartstock_test databases
+#    (asks for the PostgreSQL superuser password)
 make db-create
 #    equivalent: psql -U postgres -h localhost -v ON_ERROR_STOP=1 \
 #      -v app_password='<POSTGRES_PASSWORD from .env>' -f backend/scripts/create_local_db.sql
@@ -61,7 +63,8 @@ PowerShell users: call `curl.exe`, not the `curl` alias (which is `Invoke-WebReq
 | `make migrate` | `alembic upgrade head` from the venv |
 | `make dev-backend` | uvicorn with reload on port 8000 |
 | `make dev-frontend` | Vite dev server on port 5173 |
-| `make test` | Backend (pytest) and frontend (vitest) tests |
+| `make test` | Backend unit + integration (pytest) and frontend (vitest) tests |
+| `make test-unit` | Backend unit tests only (no database needed) |
 | `make lint` | Ruff, ESLint and the secret scan |
 | `make typecheck` | `mypy` (strict on `app/`) and `tsc --noEmit` |
 | `make format` | Ruff format and Prettier |
