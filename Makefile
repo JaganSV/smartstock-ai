@@ -39,8 +39,9 @@ dev-frontend:
 
 test: test-backend test-frontend
 
+# REQUIRE_TEST_DB=1 (default here) makes an unreachable test DB a failure, not a skip.
 test-backend:
-	cd backend && $(VENV)/python -m pytest
+	cd backend && REQUIRE_TEST_DB=$${REQUIRE_TEST_DB:-1} $(VENV)/python -m pytest
 
 # Unit tests only (no database needed).
 test-unit:

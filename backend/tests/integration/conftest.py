@@ -1,12 +1,14 @@
 """Integration fixtures: test database migrated once; one rolled-back transaction per test.
 
 If TEST_DATABASE_URL is unset or the database is unreachable, every integration test is skipped
-with a clear message instead of failing with a stack trace.
+with a clear message, unless REQUIRE_TEST_DB=1 (strict mode, the default under `make test`), in
+which case they fail with the same message. See docs/TEST_STRATEGY.md.
 """
 
 import os
 from collections.abc import Iterator
 from pathlib import Path
+from typing import NoReturn
 
 import pytest
 from alembic import command
@@ -19,6 +21,21 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
+
+
+def _require_db() -> bool:
+    return os.environ.get("REQUIRE_TEST_DB", "0") == "1"
+
+
+def _unavailable(reason: str) -> NoReturn:
+    """Skip, or fail when strict mode (REQUIRE_TEST_DB=1) is on."""
+    if _require_db():
+        pytest.fail(
+            f"Integration tests FAILED: {reason} "
+            "(REQUIRE_TEST_DB=1; set REQUIRE_TEST_DB=0 to skip instead)",
+            pytrace=False,
+        )
+    pytest.skip(f"Integration tests skipped: {reason}")
 
 
 def _test_url() -> str | None:
@@ -41,7 +58,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 def test_database_url() -> str:
     url = _test_url()
     if url is None:
-        pytest.skip("Integration tests skipped: TEST_DATABASE_URL is not set.")
+        _unavailable("TEST_DATABASE_URL is not set.")
     assert url is not None
     try:
         engine = create_engine(url, connect_args={"connect_timeout": 3})
@@ -49,9 +66,7 @@ def test_database_url() -> str:
             connection.execute(text("SELECT 1"))
         engine.dispose()
     except SQLAlchemyError:
-        pytest.skip(
-            "Integration tests skipped: the test database (TEST_DATABASE_URL) is unreachable."
-        )
+        _unavailable("the test database (TEST_DATABASE_URL) is unreachable.")
     return url
 
 
