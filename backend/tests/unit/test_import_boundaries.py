@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 ANALYTICS_DIR = Path(__file__).resolve().parents[2] / "app" / "analytics"
-FORBIDDEN = ("app.repositories", "app.api", "app.ai")
+FORBIDDEN = ("app.repositories", "app.api", "app.ai", "app.db", "data", "sqlalchemy")
 
 
 def _imported_modules(tree: ast.AST) -> list[str]:
@@ -128,3 +128,67 @@ def test_seed_detector_catches_forbidden_imports(source: str, forbidden: tuple[s
 def test_seed_detector_allows_models_and_config() -> None:
     source = "from app.models import Product\nfrom app.core.config import get_settings"
     assert _imports_of(source, SEED_FORBIDDEN) == []
+
+
+# --- analytics purity (BOB-P2-01): no wall clock, no global NumPy warning suppression ---
+
+WALL_CLOCK_TOKENS = (
+    "date.today",
+    "datetime.now",
+    "datetime.utcnow",
+    "time.time(",
+    "time.monotonic",
+)
+SUPPRESSION_TOKENS = (
+    "np.seterr",
+    "numpy.seterr",
+    "np.errstate",
+    "numpy.errstate",
+    "filterwarnings",
+)
+
+
+def test_analytics_never_reads_the_wall_clock() -> None:
+    """ADR-012: all date logic uses the supplied t0."""
+    for path in ANALYTICS_DIR.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        for token in WALL_CLOCK_TOKENS:
+            assert token not in source, f"{path.name} uses {token}"
+
+
+def test_analytics_does_not_silence_numpy_warnings_or_catch_zero_division() -> None:
+    for path in ANALYTICS_DIR.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        for token in (*SUPPRESSION_TOKENS, "ZeroDivisionError"):
+            assert token not in source, f"{path.name} uses {token}"
+
+
+def test_analytics_reads_no_settings_or_files() -> None:
+    for path in ANALYTICS_DIR.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        assert "app.core.config" not in _imported_modules(tree), path.name
+        calls = [
+            node.func.id
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        ]
+        assert "open" not in calls and "print" not in calls, path.name
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import sqlalchemy",
+        "from sqlalchemy.orm import Session",
+        "from app.db.session import get_db",
+        "import data.seed.generator",
+        "from data.seed import catalog",
+        "from app.repositories.sales import SalesRepository",
+    ],
+)
+def test_extended_detector_catches_the_new_forbidden_imports(source: str) -> None:
+    assert _violations(source) != []
+
+
+def test_extended_detector_allows_pandas_numpy_and_stdlib() -> None:
+    assert _violations("import pandas as pd\nimport numpy as np\nfrom datetime import date") == []

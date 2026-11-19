@@ -1,6 +1,6 @@
 # Defects
 
-Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-02).
+Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-02, BOB-P2-01).
 
 | ID | Phase | Description | Fix | File |
 | --- | --- | --- | --- | --- |
@@ -19,3 +19,8 @@ Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-
 | D-P1-009 | P1-02 | Test used `dict(...)` over a `.tuples()` result to build the status counts (same deprecation as D-P1-007). | Iterate the rows directly. | `backend/tests/integration/test_seed_db.py` |
 | D-P1-010 | P1-02 | `make lint` secret scan flagged `docs/evidence/seed_report.md`: SHA-256 checksums (64 hex chars) match the long-string pattern. | Excluded that exact path from the scan (comment in the Makefile). Every other file is still scanned. | `Makefile` |
 | D-P1-011 | P1-02 | Draft code carried two `type: ignore` comments (a NumPy array annotation and test `tmp_path` typing). | Removed both before the first commit: typed the array alias `IntArray` and used `Path` for `tmp_path`. The tree has no `type: ignore` in `app/`, `data/` or `tests/`. | `backend/data/seed/report.py`, `backend/tests/integration/test_seed_db.py` |
+| D-P2-001 | P2-01 | `build_metric_inputs` indexed a DataFrame with a tuple of column names (`policies[POLICIES_COLS]`), which pandas treats as one key (`KeyError`). | Convert the constants to lists at the two use sites. | `backend/app/analytics/inputs.py` |
+| D-P2-002 | P2-01 | Test data bug: the property grid generated an open order dated before t0 (contract says open_incoming holds only arrivals after t0, which `build_metric_inputs` guarantees). `projected_stock` counted it, breaking the "available <= 0 gives day 0" property for one row. | Grid now generates arrivals from t0 + 1. The function was correct: it relies on the input contract. | `backend/tests/unit/analytics/test_metrics.py` |
+| D-P2-003 | P2-01 | Test bug: `test_numeric` expected `safe_ceil(2.0000000001) == 3`; 1e-10 is below the 9 dp rounding step, so the correct value is 2. | Corrected the expectation and added a 1e-9 / 4e-10 threshold test. | `backend/tests/unit/analytics/test_numeric.py` |
+| D-P2-004 | P2-01 | Test bug: a `str.replace` that widened `FORBIDDEN` in the import-boundary test also rewrote `SEED_FORBIDDEN` (substring match), making the seed boundary test fail on `data` imports. | Restored `SEED_FORBIDDEN` to the three modules in BOB-P1-02 Section 10. | `backend/tests/unit/test_import_boundaries.py` |
+| D-P2-005 | P2-01 | Draft tests used `type: ignore` for two deliberately illegal calls. | Replaced them with `Any`-typed handles. No `type: ignore` in `app/`, `data/` or `tests/`. | `backend/tests/unit/analytics/test_params.py` |

@@ -1,5 +1,39 @@
 # Project Status
 
+## Phase P2 (part 1): Inventory analytics engine, metric functions (BOB-P2-01)
+
+**Status: implemented and validated; awaiting architect review.** Risk classes, slow/dead flags, snapshots and the recalculation service are BOB-P2-02. No new dependencies; pins unchanged.
+
+- Package `backend/app/analytics/`: `params.py`, `inputs.py`, `metrics.py`, `projection.py`, `numeric.py`, `types.py`, `errors.py`. Pure Pandas/NumPy/stdlib; it imports nothing from `app.repositories`, `app.api`, `app.ai`, `app.db`, `data` or SQLAlchemy, never reads the wall clock and never reads settings (enforced by `tests/unit/test_import_boundaries.py`).
+- Stable signatures for P2-02: `build_metric_inputs(products, warehouses, suppliers, policies, levels, incoming, sales, params) -> DataFrame` and `compute_metrics(inputs, params) -> DataFrame`.
+- No formula, default, Z value, window or rounding rule was changed from BP 7.1 to 7.3.
+- Interpretations (for architect confirmation): `demand_trend` and `days_of_cover` return NaN (not None) in float columns; `projected_stockout_day` is a nullable `Int64` column (`<NA>` for none). `incoming_in_lt` counts arrivals with `t0 < arrival <= t0 + L`; `projected_stock` counts every arrival `<= t0 + k` and relies on `build_metric_inputs` having already dropped arrivals `<= t0`. `lead_time_override_days` of 0 would be treated as an override of 0 (the schema CHECK forbids it).
+- `service_level` is converted to float in the input frame; `AnalyticsParams.z_for` rounds to 3 dp then does an exact dictionary lookup (never interpolates).
+
+### Metric definitions implemented (traceability matrix, competency 7)
+
+| BP formula | Function (`app/analytics/`) | Hand-calculated and edge tests (`tests/unit/analytics/`) |
+| --- | --- | --- |
+| 7.1 parameters, Z table, `z_for`, `to_json` | `params.AnalyticsParams` | `test_params.py`: `test_defaults_match_bp_7_1`, `test_z_for_exact_table_values`, `test_unsupported_service_levels_raise_and_never_interpolate`, `test_to_json_is_serialisable_and_complete` |
+| 7.2 ADS_n = sum of last n days / n | `metrics.ads` | `test_metrics.py`: `test_ads_hand_calculated`, `test_ads_only_uses_the_last_n_days_and_keeps_the_index` |
+| 7.2 sigma_d, population std (ddof 0) | `metrics.demand_std` | `test_demand_std_is_population_std`, `test_demand_std_uses_ddof_zero_not_ddof_one` |
+| 7.2 L = override else supplier | `metrics.lead_time_days` | `test_lead_time_override_beats_supplier_lead_time` |
+| 7.2 available = on_hand - committed | `metrics.available` | `test_available_can_be_negative` |
+| 7.2 incoming_in_LT (t0 < arrival <= t0+L) | `metrics.incoming_in_lead_time` | `test_incoming_boundaries_around_t0_and_t0_plus_lead_time` |
+| 7.2 SS = override else ceil(Z sigma sqrt(L)) | `metrics.safety_stock` | `test_safety_stock_hand_calculated_and_overrides`, `test_safety_stock_override_skips_the_z_lookup`, `test_safety_stock_float_artefact_is_not_rounded_up` |
+| 7.2 ROP = ceil(ADS30 L) + SS | `metrics.reorder_point` | `test_reorder_point_hand_calculated` |
+| 7.2 DoC = max(0, available) / ADS30 | `metrics.days_of_cover` | `test_days_of_cover_hand_calculated_without_runtime_warnings` |
+| 7.2 IP = available + incoming_in_LT | `metrics.inventory_position` | `test_inventory_position` |
+| 7.2 Q_raw, Q (MOQ, case pack) | `metrics.reorder_quantity_raw`, `metrics.reorder_quantity` | `test_reorder_quantity_raw_hand_calculated`, `test_reorder_quantity_hand_calculated`, `test_reorder_quantity_is_zero_when_raw_is_not_positive` |
+| 7.2 demand trend (14 vs prior 76) | `metrics.demand_trend` | `test_demand_trend_hand_calculated`, `test_demand_trend_custom_windows_and_longer_series` |
+| 7.2 inventory value (Decimal 2 dp half-up) | `metrics.inventory_value`, `numeric.money` | `test_inventory_value_is_decimal_two_dp_half_up`, `test_money_is_two_dp_round_half_up` |
+| 7.2 all metrics together | `metrics.compute_metrics` | `test_compute_metrics_hand_calculated_rows`, `test_compute_metrics_output_schema_and_dtypes`, `test_compute_metrics_on_the_seed_takes_under_one_second` |
+| 7.3 projected stock, stockout day | `projection.projected_stock`, `projection.projected_stockout_day` | `test_projection.py` (17 tests: before/after L, exactly 0, available <= 0 gives day 0, rescue by incoming, ADS30 = 0 gives None) |
+| 7.7 safe ceiling (float artefacts) | `numeric.safe_ceil`, `numeric.safe_ceil_array` | `test_numeric.py`: `test_safe_ceil_values`, `test_naive_ceil_really_has_the_artefact`, `test_safe_ceil_array_property_grid` |
+| 7.4 input frame, windowing, validation | `inputs.build_metric_inputs` | `test_inputs.py` (23 tests) |
+| 7.6 worked example | whole pipeline | `test_worked_example.py::test_worked_example_reproduces_bp_7_6` |
+| Property invariants (600 seeded cases) | `compute_metrics` | `test_metrics.py::test_property_*` (3 seeds x 200 rows, plus a scalar oracle) |
+| Engineered seed scenarios | `compute_metrics` over the in-memory seed | `test_seed_sanity.py` |
 ## Phase P1 (part 2): Synthetic data seed generator (BOB-P1-02)
 
 **Status: implemented and validated; awaiting architect review.** Seed 42, t0 2026-09-30. Full outputs are in the BOB-P1-02 report; the generated evidence is `docs/evidence/seed_report.md`.
