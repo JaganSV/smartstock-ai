@@ -1,5 +1,14 @@
 # Project Status
 
+## Phase P2 (part 2): carry-over A1–A4 (BOB-P2-02, Commit A)
+
+- **A1 (accepted):** NaN for `days_of_cover`/`demand_trend` and nullable `Int64` for `projected_stockout_day` stay. At persistence and at every API boundary NaN/`<NA>` maps to SQL `NULL` / JSON `null`. No sentinel numbers.
+- **A2 (done):** `projected_stock` and `projected_stockout_day` now ignore arrivals dated on or before t₀ themselves (`t0 < arrival <= t0 + k`), as defence in depth. Test: `test_projection.py::test_arrival_on_or_before_t0_is_ignored`. The P2-01 statement below that `projected_stock` counts every arrival `<= t0 + k` is superseded.
+- **A3 (done):** gate outputs must come from a run on the final committed tree; rule added to `docs/TEST_STRATEGY.md`.
+- **A4 (done):** the only seed change. HIGH_DEMAND target band narrowed from `L <= DoC <= L+R` to `L+0.25 <= DoC <= L+1.0` at WH-BLR (`data/seed/scenarios.py`; the matching check in `data/seed/report.py`). Reason: under BP 7.4 a HIGH_DEMAND row with DoC in [L, L+R] usually classifies MEDIUM, so the seed could hold no HIGH row. Canonical counts are unchanged (150 levels, 150 policies, 113 incoming, 13,500 sales rows). All scenario checks still PASS. NumPy is still 2.5.5 (K1 record untouched).
+  - Overall seed checksum (SHA-256, first 16 hex characters; the full value is in `docs/evidence/seed_report.md`, which the secret scan excludes by exact path): before `6e2e95ea4a97e7f0`, after `e5a3a5fbe8b38581`. The scan pattern matches 40+ character strings, so full digests are not repeated here.
+  - HIGH_DEMAND DoC at WH-BLR after the change: SKU-009 21.76 (L=21), SKU-010 5.36 (L=5), SKU-011 10.49 (L=10), SKU-012 14.52 (L=14).
+
 ## Phase P2 (part 1): Inventory analytics engine, metric functions (BOB-P2-01)
 
 **Status: implemented and validated; awaiting architect review.** Risk classes, slow/dead flags, snapshots and the recalculation service are BOB-P2-02. No new dependencies; pins unchanged.

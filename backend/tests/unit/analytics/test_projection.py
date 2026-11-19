@@ -38,8 +38,15 @@ def test_projected_stock_with_zero_horizon() -> None:
     assert projected_stock(8, 3.0, [], T0, 0) == [8]
 
 
-def test_arrival_on_day_zero_counts_from_day_zero() -> None:
-    assert projected_stock(0, 1.0, [(day(0), 10)], T0, 1) == [10, 9]
+def test_arrival_on_or_before_t0_is_ignored() -> None:
+    """A2 (defence in depth): stock that arrived by t0 is already in on_hand."""
+    assert projected_stock(0, 1.0, [(day(0), 10)], T0, 1) == [0, -1]
+    assert projected_stock(0, 1.0, [(day(-3), 10)], T0, 1) == [0, -1]
+    assert projected_stockout_day(0, 1.0, [(day(0), 1000)], T0, 5) == 0
+
+
+def test_arrival_on_day_one_counts_from_day_one() -> None:
+    assert projected_stock(0, 1.0, [(day(1), 10)], T0, 2) == [0, 9, 8]
 
 
 def test_orders_after_the_horizon_are_ignored() -> None:

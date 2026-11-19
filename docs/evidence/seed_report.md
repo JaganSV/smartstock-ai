@@ -46,10 +46,10 @@ Synthetic data — fictional entities only.
 | SKU-006 | WH-MUM | CRITICAL | DoC=5.00, ADS30=4.20, L=7, open=[] | 0.3L <= DoC <= 0.8L; no OPEN incoming before day floor(DoC) | PASS |
 | SKU-007 | WH-MUM | CRITICAL | DoC=5.10, ADS30=3.33, L=10, open=[] | 0.3L <= DoC <= 0.8L; no OPEN incoming before day floor(DoC) | PASS |
 | SKU-008 | WH-MUM | CRITICAL | DoC=9.66, ADS30=4.97, L=14, open=[] | 0.3L <= DoC <= 0.8L; no OPEN incoming before day floor(DoC) | PASS |
-| SKU-009 | WH-BLR | HIGH_DEMAND | DoC=32.97, ADS30=3.03, L=21, last14/prior76=2.34 | mean(last 14d) >= 1.5 x mean(prior 76d); L <= DoC <= L+R | PASS |
-| SKU-010 | WH-BLR | HIGH_DEMAND | DoC=6.24, ADS30=12.50, L=5, last14/prior76=1.83 | mean(last 14d) >= 1.5 x mean(prior 76d); L <= DoC <= L+R | PASS |
-| SKU-011 | WH-BLR | HIGH_DEMAND | DoC=13.28, ADS30=6.10, L=10, last14/prior76=1.60 | mean(last 14d) >= 1.5 x mean(prior 76d); L <= DoC <= L+R | PASS |
-| SKU-012 | WH-BLR | HIGH_DEMAND | DoC=15.81, ADS30=3.10, L=14, last14/prior76=2.22 | mean(last 14d) >= 1.5 x mean(prior 76d); L <= DoC <= L+R | PASS |
+| SKU-009 | WH-BLR | HIGH_DEMAND | DoC=21.76, ADS30=3.03, L=21, last14/prior76=2.34 | mean(last 14d) >= 1.5 x mean(prior 76d); L+0.25 <= DoC <= L+1.0 | PASS |
+| SKU-010 | WH-BLR | HIGH_DEMAND | DoC=5.36, ADS30=12.50, L=5, last14/prior76=1.83 | mean(last 14d) >= 1.5 x mean(prior 76d); L+0.25 <= DoC <= L+1.0 | PASS |
+| SKU-011 | WH-BLR | HIGH_DEMAND | DoC=10.49, ADS30=6.10, L=10, last14/prior76=1.60 | mean(last 14d) >= 1.5 x mean(prior 76d); L+0.25 <= DoC <= L+1.0 | PASS |
+| SKU-012 | WH-BLR | HIGH_DEMAND | DoC=14.52, ADS30=3.10, L=14, last14/prior76=2.22 | mean(last 14d) >= 1.5 x mean(prior 76d); L+0.25 <= DoC <= L+1.0 | PASS |
 | SKU-013 | WH-DEL | OVERSTOCK | DoC=165.58, ADS30=1.73, L=21 | 150 <= DoC <= 300 | PASS |
 | SKU-014 | WH-DEL | OVERSTOCK | DoC=204.65, ADS30=4.30, L=5 | 150 <= DoC <= 300 | PASS |
 | SKU-015 | WH-DEL | OVERSTOCK | DoC=188.45, ADS30=6.03, L=7 | 150 <= DoC <= 300 | PASS |
@@ -97,12 +97,12 @@ Measured DoC range: 34.44 to 88.42.
 | --- | --- |
 | categories | `00f9bc2230555bc3b0595eb219f79020ca349c8d91b640534123748f03c934c0` |
 | incoming_stock | `ca0bbd62735eb5edb39ec5361bca5ecaa39e56a8dcf46df3953f9ed1268e7eec` |
-| inventory_levels | `f623dc54001eeea991ad4c0a920b16dc5af9f2787c6f707833bb9ee3e7a5fa7a` |
+| inventory_levels | `c057b9cf2d697dde05c612c177c01b794f80994b9e38ebbff10cc8a0042a7f46` |
 | inventory_policies | `61e256f536e2aa9021cb18082a04d1b0096eeb3de0fdb00c0086a5fcdcd656a1` |
 | products | `38d49889a273c62418930ba5a40640250e38bfb941f37d0cfffcd16dcb68f187` |
 | sales_daily | `f25e213b15393ea02ebaaecaf848aa398d827c40f48aaf6cf24e19c97fd4b425` |
 | suppliers | `b270ee8ca6d6c3d5103ea053e88806f7561d78222d875944e8b4f3c2bf711c6c` |
 | warehouses | `b55c05d18a984e2014530b28dd5b2ddcc6b6a48c5cc6c00a98224de3ca67876d` |
-| **overall** | `6e2e95ea4a97e7f02dc1a5610ce93ce67fa2554f8a4319d1158a4b9634401743` |
+| **overall** | `e5a3a5fbe8b385814915d5ee77d285c2233c2f1964f581cc31446f0b329bfc62` |
 
 Synthetic data — fictional entities only.

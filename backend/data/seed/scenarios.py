@@ -40,7 +40,7 @@ SCENARIOS = (
     ScenarioDef(Scenario.CRITICAL, 4, 8, "WH-MUM",
                 "0.3L <= DoC <= 0.8L; no OPEN incoming before day floor(DoC)"),
     ScenarioDef(Scenario.HIGH_DEMAND, 9, 12, "WH-BLR",
-                "mean(last 14d) >= 1.5 x mean(prior 76d); L <= DoC <= L+R"),
+                "mean(last 14d) >= 1.5 x mean(prior 76d); L+0.25 <= DoC <= L+1.0"),
     ScenarioDef(Scenario.OVERSTOCK, 13, 17, "WH-DEL", "150 <= DoC <= 300"),
     ScenarioDef(Scenario.SLOW_MOVING, 18, 20, "WH-MUM",
                 "ADS30 <= 0.4 x ADS90; on_hand > 0; DoC > 90"),
@@ -99,7 +99,8 @@ class DocBand:
 # Scenario -> band as a function of (L, R). STOCKOUT and DEAD_STOCK have no DoC band.
 DOC_BANDS: dict[Scenario, Callable[[int, int], DocBand]] = {
     Scenario.CRITICAL: lambda L, R: DocBand(0.35 * L, 0.75 * L, 0.3 * L, 0.8 * L),
-    Scenario.HIGH_DEMAND: lambda L, R: DocBand(L + 1, L + R - 1, L, L + R),
+    # BOB-P2-02 A4: narrowed so that BP 7.4 classifies the row HIGH (IP <= ROP), not MEDIUM.
+    Scenario.HIGH_DEMAND: lambda L, R: DocBand(L + 0.3, L + 0.95, L + 0.25, L + 1.0),
     Scenario.OVERSTOCK: lambda L, R: DocBand(165, 285, 150, 300),
     Scenario.SLOW_MOVING: lambda L, R: DocBand(100, 250, 91, 400),
     Scenario.COVERED_BY_INCOMING: lambda L, R: DocBand(0.4 * L, 0.9 * L, 0.2 * L, 0.95 * L),

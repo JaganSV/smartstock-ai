@@ -259,7 +259,7 @@ def _evaluate(scenario: Scenario, p: _Pair) -> tuple[str, bool]:
         ok = (
             2 * (len(p.units) - SPIKE_DAYS) * recent >= 3 * SPIKE_DAYS * prior
             and doc is not None
-            and lead - EPS <= doc <= lead + r + EPS
+            and lead + 0.25 - EPS <= doc <= lead + 1.0 + EPS
         )
         return f"{head}, last14/prior76={ratio:.2f}", ok
     if scenario is Scenario.OVERSTOCK:

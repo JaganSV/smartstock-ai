@@ -27,6 +27,10 @@ REQUIRE_TEST_DB=1 TEST_DATABASE_URL=postgresql+psycopg://x:y@localhost:59999/non
 
 The intent is that a green `make test` always means the integration layer really ran.
 
+## Standing rule: gate outputs come from the final committed tree (A3)
+
+The `make lint`, `make typecheck` and `make test` outputs pasted into a phase report must come from a run made **after the last commit, with `git status --short` empty**. A run on an uncommitted or later-edited tree is not evidence. If any file changes after the run, commit it and run all three gates again.
+
 ## Coverage
 
 `pytest --cov` reports on `app/` (models and repositories are held at 100%) and on `data/seed/` (target at least 85%).
