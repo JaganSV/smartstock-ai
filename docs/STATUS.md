@@ -1,8 +1,25 @@
 # Project Status
 
+## Phase P1 (part 2): Synthetic data seed generator (BOB-P1-02)
+
+**Status: implemented and validated; awaiting architect review.** Seed 42, t0 2026-09-30. Full outputs are in the BOB-P1-02 report; the generated evidence is `docs/evidence/seed_report.md`.
+
+- Generator: `backend/data/seed/` (`catalog`, `scenarios`, `demand`, `stock`, `report`, `generator`), run with `make seed` (CLI `python -m data.seed.generator`). No new dependencies; pins unchanged.
+- Seeded tables and counts (seed 42): categories 5, suppliers 5, warehouses 3, products 50, inventory_policies 150, inventory_levels 150, sales_daily 13,500, **incoming_stock 113**.
+- Not seeded: `metric_snapshots`, `product_metrics`, `replenishment_recommendations`, `approval_decisions`, `executive_reports`, `documents`, `ai_interactions`, `audit_log`, `users`.
+- **Currency assumption: all monetary values are INR** (cost bands, prices and revenue).
+- **Deviation from BP 5.4 (recorded, not dropped):** the "4 seeded demo users" are **deferred to P3**, which owns password hashing. `users` stays empty until then (BOB-P1-02 7.9).
+- Determinism: one `numpy.random.default_rng(seed)`; no `random`, `uuid`, wall clock or hash-dependent ordering in the data path. The RNG stream is only guaranteed for the pinned NumPy (2.5.5), so a NumPy upgrade can change the checksums and the report records the NumPy version.
+- Checksums use natural keys (SKU, warehouse code) rather than surrogate ids, so they match between the generated data and the data read back from the database, across re-seeds.
+- Scenario formulas in `data/seed/scenarios.py` are generator **design targets** only. They are not business logic, `app/` never imports `data/`, and P2 implements the real formulas independently (enforced by `tests/unit/test_import_boundaries.py`).
+- Where a random draw would miss a band, the value is fitted back deterministically (clamping `available`, scaling the last 14 or 30 days of demand). There are no RNG retry loops.
+- `secret-scan` excludes the exact path `docs/evidence/seed_report.md`: it lists SHA-256 checksums (64 hex characters), which match the long-string pattern but are not secrets.
+- `mypy` now covers `app` and `data/seed` (strict), and pytest coverage covers `app` and `data/seed`.
+- `REQUIRE_TEST_DB` (Q4): `make test` defaults to `1` (unreachable test DB fails); see `docs/TEST_STRATEGY.md`.
+
 ## Phase P1 (part 1): Database schema, migrations and repositories (BOB-P1-01)
 
-**Status: implemented; validation output is in the BOB-P1-01 report.** Seed data is BOB-P1-02 and is not started.
+**Status: implemented; finally accepted after the E1 re-run evidence in BOB-P1-02 (commit A).**
 
 - Alembic head: `0001_core_schema` (17 tables plus `alembic_version`). `document_chunks` and the `vector` extension are absent (ADR-014).
 - Databases: `smartstock` (dev) and `smartstock_test` (integration tests), both owned by `smartstock`.

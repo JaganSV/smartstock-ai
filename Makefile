@@ -59,8 +59,10 @@ lint-frontend:
 	cd frontend && npm run lint
 
 # Fails (non-zero exit) if any tracked/untracked-but-not-ignored file matches a secret pattern.
+# docs/evidence/seed_report.md is excluded by exact path: it lists SHA-256 checksums (64 hex chars),
+# which match the long-string pattern but are not secrets (BOB-P1-02).
 secret-scan:
-	@if git grep --untracked -nIiE '$(SECRET_RE)' -- . ':!.env.example' ':!Makefile' ':!frontend/package-lock.json' ':!backend/requirements.lock'; then \
+	@if git grep --untracked -nIiE '$(SECRET_RE)' -- . ':!.env.example' ':!Makefile' ':!frontend/package-lock.json' ':!backend/requirements.lock' ':!docs/evidence/seed_report.md'; then \
 		echo "Secret scan FAILED: potential secret found above"; exit 1; \
 	else \
 		echo "Secret scan passed"; \
@@ -69,7 +71,7 @@ secret-scan:
 typecheck: typecheck-backend typecheck-frontend
 
 typecheck-backend:
-	cd backend && $(VENV)/python -m mypy app
+	cd backend && $(VENV)/python -m mypy
 
 typecheck-frontend:
 	cd frontend && npm run typecheck
@@ -78,8 +80,9 @@ format:
 	cd backend && $(VENV)/python -m ruff check --fix . && $(VENV)/python -m ruff format .
 	cd frontend && npm run format
 
+# Deterministic synthetic data (seed 42, t0 2026-09-30). Refuses to run unless APP_ENV is local/test.
 seed:
-	@echo "Not implemented until P1"
+	cd backend && PYTHONIOENCODING=utf-8 $(VENV)/python -m data.seed.generator
 
 eval:
 	@echo "Not implemented until P6"

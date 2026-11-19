@@ -34,7 +34,7 @@ include = ["app*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra --cov=app --cov-report=term-missing"
+addopts = "-ra --cov=app --cov=data/seed --cov-report=term-missing"
 markers = [
     "integration: needs the PostgreSQL test database (TEST_DATABASE_URL); skipped when unreachable",
 ]
@@ -57,7 +57,7 @@ known-third-party = ["alembic"]
 "alembic/versions/*" = ["E501"]
 
 [tool.mypy]
-files = ["app"]
+files = ["app", "data/seed"]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]

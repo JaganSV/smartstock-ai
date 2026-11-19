@@ -1,6 +1,6 @@
 # Defects
 
-Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01).
+Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-02).
 
 | ID | Phase | Description | Fix | File |
 | --- | --- | --- | --- | --- |
@@ -14,3 +14,8 @@ Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01).
 | D-P1-004 | P1 | Test bug: the insert-only API test counted the class attribute `model` as a public method. | List only functions (`inspect.getmembers(..., isfunction)`). | `backend/tests/integration/test_repositories.py` |
 | D-P1-005 | P1 | Alembic `DeprecationWarning`: no `path_separator` in `alembic.ini`. | Added `path_separator = os`. | `backend/alembic.ini` |
 | D-P1-006 | P1 | ruff E501 on a long docstring line in the integration conftest. | Shortened the docstring. | `backend/tests/integration/conftest.py` |
+| D-P1-007 | P1-02 | `INSERT ... RETURNING` result was consumed with `dict(result.tuples())`; `Result.tuples()` is deprecated in SQLAlchemy 2.1 and the dict conversion failed at runtime (`ChunkedIteratorResult is not subscriptable`). | Replaced with a small `_id_map()` that reads `(key, id)` rows directly. No deprecation warnings remain. | `backend/data/seed/generator.py` |
+| D-P1-008 | P1-02 | Integration test compared `inventory_levels.as_of` as an ISO string; the DB session returned the same instant in the local time zone (`+05:30`). | Compare the instant in UTC (`astimezone(UTC)`). The stored value was correct. | `backend/tests/integration/test_seed_db.py` |
+| D-P1-009 | P1-02 | Test used `dict(...)` over a `.tuples()` result to build the status counts (same deprecation as D-P1-007). | Iterate the rows directly. | `backend/tests/integration/test_seed_db.py` |
+| D-P1-010 | P1-02 | `make lint` secret scan flagged `docs/evidence/seed_report.md`: SHA-256 checksums (64 hex chars) match the long-string pattern. | Excluded that exact path from the scan (comment in the Makefile). Every other file is still scanned. | `Makefile` |
+| D-P1-011 | P1-02 | Draft code carried two `type: ignore` comments (a NumPy array annotation and test `tmp_path` typing). | Removed both before the first commit: typed the array alias `IntArray` and used `Path` for `tmp_path`. The tree has no `type: ignore` in `app/`, `data/` or `tests/`. | `backend/data/seed/report.py`, `backend/tests/integration/test_seed_db.py` |

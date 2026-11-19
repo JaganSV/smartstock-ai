@@ -63,14 +63,28 @@ PowerShell users: call `curl.exe`, not the `curl` alias (which is `Invoke-WebReq
 | `make migrate` | `alembic upgrade head` from the venv |
 | `make dev-backend` | uvicorn with reload on port 8000 |
 | `make dev-frontend` | Vite dev server on port 5173 |
-| `make test` | Backend unit + integration (pytest) and frontend (vitest) tests |
+| `make test` | Backend unit + integration (pytest, `REQUIRE_TEST_DB=1`: an unreachable test DB fails) and frontend (vitest) tests |
 | `make test-unit` | Backend unit tests only (no database needed) |
 | `make lint` | Ruff, ESLint and the secret scan |
 | `make typecheck` | `mypy` (strict on `app/`) and `tsc --noEmit` |
 | `make format` | Ruff format and Prettier |
-| `make seed` | Placeholder (not implemented until P1) |
+| `make seed` | Seed the dev DB with the deterministic synthetic dataset (seed 42); see "Seeding" |
 | `make eval` | Placeholder (not implemented until P6) |
 | `make up` / `down` / `logs` | Docker Compose wrappers (see below) |
+
+## Seeding
+
+`make seed` loads the synthetic dataset into the dev database (run `make migrate` first). It is deterministic: the same seed gives identical data, every time. Re-running replaces the seeded tables in one transaction, so the result never changes.
+
+```bash
+make seed                                          # seed 42, data_as_of_date 2026-09-30
+cd backend && .venv/Scripts/python -m data.seed.generator --dry-run                # no DB access
+cd backend && .venv/Scripts/python -m data.seed.generator --seed 43 --dry-run      # different data
+```
+
+Options: `--seed N`, `--as-of YYYY-MM-DD`, `--dry-run`, `--report-path PATH`. Exit codes: 0 ok, 1 coverage failure, 2 refused (`APP_ENV` must be `local` or `test`) or bad arguments, 3 database error. It writes `docs/evidence/seed_report.md` (scenario coverage and checksums). All data is synthetic and all entities are fictional; currency is INR.
+
+Seeded tables: categories, suppliers, warehouses, products, inventory_policies, inventory_levels, incoming_stock, sales_daily. Users are not seeded until P3.
 
 ## Docker (P10)
 
