@@ -1,9 +1,12 @@
 """Seed generator unit tests (pure generation, no database)."""
 
+import re
 from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal
+from pathlib import Path
 
+import numpy
 import pytest
 
 from data.seed.catalog import CASE_PACKS, SUPPLIERS, WAREHOUSES
@@ -216,3 +219,17 @@ def test_report_contains_required_sections(ds: Dataset) -> None:
     ):
         assert needle in text
     assert "FAIL" not in text.replace("Overall coverage", "")
+
+
+SEED_REPORT = Path(__file__).resolve().parents[3] / "docs" / "evidence" / "seed_report.md"
+
+
+def test_numpy_version_matches_the_seed_report() -> None:
+    """The RNG stream (and so every seed checksum) is only valid for the recorded NumPy."""
+    match = re.search(r"^- NumPy: `([^`]+)`", SEED_REPORT.read_text(encoding="utf-8"), re.MULTILINE)
+    assert match is not None, "seed_report.md has no '- NumPy: `x.y.z`' line"
+    recorded = match.group(1)
+    assert numpy.__version__ == recorded, (
+        f"NumPy version changed: seed checksums are only valid for {recorded}; "
+        "re-run make seed and update the report"
+    )
