@@ -1,6 +1,6 @@
 SHELL := bash
 
-.PHONY: up down logs db-create migrate dev-backend dev-frontend test test-unit test-backend test-frontend lint lint-backend lint-frontend secret-scan typecheck typecheck-backend typecheck-frontend format seed recalc eval
+.PHONY: up down logs db-create migrate dev-backend dev-frontend test test-unit test-backend test-frontend lint lint-backend lint-frontend secret-scan typecheck typecheck-backend typecheck-frontend format seed recalc coverage-summary eval
 
 # Host (native) Python from the Python 3.12 venv; Git Bash path style.
 VENV := .venv/Scripts
@@ -87,6 +87,10 @@ seed:
 # Recalculate analytics on the dev database and write a dated snapshot (BOB-P2-02).
 recalc:
 	cd backend && PYTHONIOENCODING=utf-8 $(VENV)/python -m app.cli recalc --triggered-by cli
+
+# Per-package coverage table from the .coverage data of the last make test run (BOB-P3-01 B3).
+coverage-summary:
+	cd backend && $(VENV)/python scripts/coverage_summary.py
 
 eval:
 	@echo "Not implemented until P6"

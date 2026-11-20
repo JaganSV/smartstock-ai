@@ -166,10 +166,10 @@ def test_r5_no_demand_and_no_stock_falls_through_to_low() -> None:
     assert out == ("LOW", "R6_HEALTHY")
 
 
-def test_literal_rule_3_makes_an_empty_idle_row_with_ip_equal_rop_high() -> None:
-    """Spec conflict, documented: on_hand = 0, ADS30 = 0, SS = 0 gives IP = ROP = 0, so BP 7.4
-    rule 3 (IP <= ROP) fires and the row is HIGH, not LOW. The rule order is binding, so it is
-    implemented literally and reported to the architect."""
+def test_empty_idle_row_is_high_by_rule_3_and_has_zero_reorder_quantity() -> None:
+    """Architect decision B1 (BOB-P3-01): on_hand = 0, ADS30 = 0, SS = 0 gives IP = ROP = 0, so
+    BP 7.4 rule 3 (IP <= ROP) fires and the row is HIGH (R3). HIGH is correct. Its reorder
+    quantity is 0 (Q_raw = 0), so P8 creates no recommendation for it (only where Q > 0)."""
     out = classify(
         ads_30=0.0,
         days_of_cover=None,
@@ -178,7 +178,15 @@ def test_literal_rule_3_makes_an_empty_idle_row_with_ip_equal_rop_high() -> None
         inventory_position=0,
         reorder_point=0,
     )
-    assert out[0] == "HIGH"
+    assert out == ("HIGH", "R3_BELOW_REORDER_POINT")
+
+
+def test_empty_idle_row_metrics_give_zero_reorder_quantity() -> None:
+    inputs = make_inputs(input_row(on_hand=0, committed=0, units_by_day=units(0, 0)))
+    metrics = compute_metrics(inputs, PARAMS)
+    assert metrics["reorder_point"][0] == 0
+    assert metrics["inventory_position"][0] == 0
+    assert metrics["reorder_qty"][0] == 0
 
 
 # --- precedence ---

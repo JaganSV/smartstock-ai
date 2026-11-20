@@ -1,5 +1,10 @@
 # Project Status
 
+## Phase P3 (part 1): carry-over B1-B3 (BOB-P3-01, Commit A)
+
+- **B1 (decided):** the literal rule 3 stays. An empty idle row (on_hand 0, ADS30 0, SS 0) has IP = ROP = 0 and classifies HIGH (R3) with Q = 0. The earlier architect note ("falls through to LOW") is withdrawn. Tests: `test_risk.py::test_empty_idle_row_is_high_by_rule_3_and_has_zero_reorder_quantity` and `::test_empty_idle_row_metrics_give_zero_reorder_quantity`. P8 creates recommendations only where Q > 0.
+- **B2 (decided):** `is_high_demand` is not persisted and the schema stays frozen. P3-02 exposes it as a derived API field from `demand_trend_pct` and the `spike_threshold` in that snapshot's `params_json` (not the current configuration), so old snapshots stay self-consistent.
+- **B3 (done):** `make coverage-summary` prints a per-package table (`app/analytics`, `app/services`, `app/repositories`, `app/api`, `app/core`, `data/seed`) from the `.coverage` data of the `make test` run that just finished (`backend/scripts/coverage_summary.py`). It never runs the tests itself. Coverage tables in reports come from the final committed-tree run.
 ## Phase P2 (part 2): risk classification, flags, roll-up, snapshots, recalculation (BOB-P2-02, Commit B)
 
 **Status: implemented and validated; awaiting architect review.** No new dependencies; pins unchanged. No BP 7 formula, rule order, threshold, Z value or rounding rule was changed. Seed data changed only in the HIGH_DEMAND band (A4, Commit A).
@@ -46,7 +51,7 @@ Table 7.8: 0 mismatches (29 scenario rows and 121 HEALTHY rows PASS). Recalculat
 
 ### Interpretations and deviations (none silent)
 
-1. **Literal rule 3 on an empty idle row (open question for the architect).** A row with on_hand = 0, ADS30 = 0 and SS = 0 has IP = ROP = 0, so rule 3 (IP <= ROP) makes it HIGH, not LOW as the BP 7.2 note implies. Implemented literally; documented in `test_risk.py::test_literal_rule_3_makes_an_empty_idle_row_with_ip_equal_rop_high`. No such row exists in seed 42.
+1. **Literal rule 3 on an empty idle row (RESOLVED by architect decision B1 in BOB-P3-01: HIGH is correct, Q = 0, P8 creates recommendations only where Q > 0).** A row with on_hand = 0, ADS30 = 0 and SS = 0 has IP = ROP = 0, so rule 3 (IP <= ROP) makes it HIGH, not LOW as the BP 7.2 note implies. Implemented literally; documented in `test_risk.py::test_literal_rule_3_makes_an_empty_idle_row_with_ip_equal_rop_high`. No such row exists in seed 42.
 2. **`DetailedHTTPException`** (`app/core/errors.py`, additive) lets the 503 envelope carry `details`. `/health/ready` with the database down now returns `details {"database": "unavailable", "analytics": "error"}`. Code `INTERNAL_ERROR` and message "Database unavailable" are unchanged.
 3. **`RECALC_ON_STARTUP`** is an optional bool; unset defaults from `APP_ENV` (on for `local`). `.env.example` sets `true`; tests set `false`.
 4. **`analytics_status`** lives in `app/services` so the API layer does not touch repositories (layering).
