@@ -25,6 +25,18 @@ class RiskClass(StrEnum):
     LOW = "LOW"
 
 
+# Most severe first (BP 7.4 roll-ups). DB values are the unchanged StrEnum values above.
+RISK_SEVERITY: tuple[RiskClass, ...] = (
+    RiskClass.STOCKOUT,
+    RiskClass.CRITICAL,
+    RiskClass.HIGH,
+    RiskClass.MEDIUM,
+    RiskClass.OVERSTOCK,
+    RiskClass.LOW,
+)
+RISK_RANK: dict[str, int] = {risk.value: rank for rank, risk in enumerate(RISK_SEVERITY)}
+
+
 class RecommendationStatus(StrEnum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"

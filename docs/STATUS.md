@@ -1,5 +1,64 @@
 # Project Status
 
+## Phase P2 (part 2): risk classification, flags, roll-up, snapshots, recalculation (BOB-P2-02, Commit B)
+
+**Status: implemented and validated; awaiting architect review.** No new dependencies; pins unchanged. No BP 7 formula, rule order, threshold, Z value or rounding rule was changed. Seed data changed only in the HIGH_DEMAND band (A4, Commit A).
+
+- `app/analytics/` additions: `risk.py` (rules R1 to R6, first match wins, `numpy.select`), `flags.py` (slow, dead, high demand), `rollup.py` (product roll-up, `risk_distribution`, `dashboard_kpis` with warehouse and category filters), `explain.py` (`explain_row`, 12 metrics, risk entry with `rules_checked` and `fired_rule`), `snapshot.py` (`to_snapshot_rows`, 4 dp half-up), `pipeline.py` (`run_analytics` = metrics + context columns + risk + flags).
+- `app/services/`: `analytics_service.py` (`RecalculationService.run(triggered_by)`: one transaction with 1 snapshot row, 150 `product_metrics` rows and 1 `audit_log` row, or nothing), `evidence.py` (Table 7.8 check and the evidence report), `errors.py`.
+- `app/cli.py`: `python -m app.cli recalc [--triggered-by LABEL] [--report PATH]`; `make recalc`. Exit codes: 0 ok, 1 analytics or data error, 2 bad arguments, 3 database error.
+- Startup recalculation (FR-B5): `RECALC_ON_STARTUP` (optional bool). Unset means on when `APP_ENV=local`, off otherwise. A failure is logged with its trace and the app keeps running.
+- `GET /api/v1/health/ready` gained an additive `analytics` field: `ok`, `no_snapshot` or `error`. Existing fields are unchanged.
+
+### Results on seed 42 (dev DB, from `docs/evidence/p2_risk_distribution.md`)
+
+| Class | Rows |
+| --- | --- |
+| STOCKOUT | 3 |
+| CRITICAL | 8 |
+| HIGH | 4 |
+| MEDIUM | 3 |
+| OVERSTOCK | 11 |
+| LOW | 121 |
+
+Table 7.8: 0 mismatches (29 scenario rows and 121 HEALTHY rows PASS). Recalculation: 191 ms and 195 ms end to end (NFR-03 limit 5000 ms).
+
+### Coverage (final tree, `REQUIRE_TEST_DB=1`)
+
+| Package | Statements | Covered | Percent | Target |
+| --- | --- | --- | --- | --- |
+| `app/analytics` | 467 | 465 | 99.57 | at least 95 |
+| `app/services` | 198 | 189 | 95.45 | at least 90 |
+| `app/repositories` | 163 | 162 | 99.39 | n/a |
+| `data/seed` | 607 | 603 | 99.34 | at least 85 |
+
+### Traceability additions (BP formula to function to test)
+
+| BP rule | Function | Tests |
+| --- | --- | --- |
+| 7.4 risk rules R1 to R6, first match wins | `risk.RISK_RULES`, `risk.rule_masks`, `risk.classify_risk` | `tests/unit/analytics/test_risk.py` (30 tests: each rule, each boundary, rule order, null DoC) |
+| 7.5 slow, dead, high-demand flags | `flags.is_slow_moving`, `flags.is_dead_stock`, `flags.is_high_demand` | `test_flags.py` (17 tests) |
+| 7.4 product roll-up, KPIs (FR-A1) | `rollup.rollup_by_product`, `rollup.dashboard_kpis`, `rollup.risk_distribution` | `test_rollup.py` (17 tests); integration `test_kpis_equal_a_direct_sql_aggregation` |
+| FR-A5 explain payload | `explain.explain_row` | `test_explain.py` (10 tests); integration `test_explain_payload_matches_the_stored_metrics_for_five_rows` |
+| 5.3 snapshot rows, 4 dp half-up | `snapshot.to_snapshot_rows` | `test_snapshot.py` (14 tests) |
+| 7.4 / 7.8 seed classification | `evidence.check_row`, `evidence.SCENARIO_EXPECTATIONS` | integration `test_seed_classification.py` (every row, all six classes) |
+| FR-B5 recalculation and audit | `RecalculationService.run`, `recalculate_on_startup` | `test_recalculation.py` (rollback, no data, repeatability, timing, startup, CLI exit codes 0, 1, 2, 3), `tests/unit/test_startup.py` |
+
+### Interpretations and deviations (none silent)
+
+1. **Literal rule 3 on an empty idle row (open question for the architect).** A row with on_hand = 0, ADS30 = 0 and SS = 0 has IP = ROP = 0, so rule 3 (IP <= ROP) makes it HIGH, not LOW as the BP 7.2 note implies. Implemented literally; documented in `test_risk.py::test_literal_rule_3_makes_an_empty_idle_row_with_ip_equal_rop_high`. No such row exists in seed 42.
+2. **`DetailedHTTPException`** (`app/core/errors.py`, additive) lets the 503 envelope carry `details`. `/health/ready` with the database down now returns `details {"database": "unavailable", "analytics": "error"}`. Code `INTERNAL_ERROR` and message "Database unavailable" are unchanged.
+3. **`RECALC_ON_STARTUP`** is an optional bool; unset defaults from `APP_ENV` (on for `local`). `.env.example` sets `true`; tests set `false`.
+4. **`analytics_status`** lives in `app/services` so the API layer does not touch repositories (layering).
+5. **`evidence.py`** lives in `app/services` (it reads through the service and renders markdown); **`pipeline.py`** is an extra analytics module that composes the existing steps.
+6. **Repositories return `Sequence[RowMapping]`** (plain rows, no DataFrames); the service builds the DataFrames.
+7. **`is_high_demand` is not persisted** (restriction). The stored `demand_trend_pct` holds the ratio, and the flag is derived from it.
+8. **Table 7.8 expectation mapping:** SLOW_MOVING accepts LOW or OVERSTOCK with the slow flag; HEALTHY means LOW with no persisted flag (seven HEALTHY-class rows have `is_high_demand` true, which is not persisted and does not break the rule).
+9. **A3 lesson:** full SHA-256 digests in tracked files trip the secret scan, so only 16-character prefixes appear outside `seed_report.md`.
+10. **NOT RUN:** Docker (deferred to P10, ADR-013) and `tree`.
+11. **Test-only suppressions:** none. No `type: ignore` and no new `noqa` anywhere (the only `noqa` lines are the pre-existing `E402` in `tests/conftest.py`).
+
+
 ## Phase P2 (part 2): carry-over A1–A4 (BOB-P2-02, Commit A)
 
 - **A1 (accepted):** NaN for `days_of_cover`/`demand_trend` and nullable `Int64` for `projected_stockout_day` stay. At persistence and at every API boundary NaN/`<NA>` maps to SQL `NULL` / JSON `null`. No sentinel numbers.

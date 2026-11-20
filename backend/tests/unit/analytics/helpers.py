@@ -71,3 +71,25 @@ def make_inputs(*rows: dict[str, Any]) -> pd.DataFrame:
         frame[column] = frame[column].astype("int64")
     frame["review_period_days"] = frame["review_period_days"].astype("int64")
     return frame
+
+
+def risk_frame(*rows: dict[str, Any]) -> pd.DataFrame:
+    """Frame with the columns ``classify_risk`` needs; defaults classify as LOW.
+
+    Defaults: available 100, ADS30 5, no stockout day, IP 100 > ROP 50, DoC 50 (> L + R = 21,
+    <= 120), L 7, R 14, on_hand 100.
+    """
+    base: dict[str, Any] = {
+        "available": 100,
+        "ads_30": 5.0,
+        "projected_stockout_day": None,
+        "inventory_position": 100,
+        "reorder_point": 50,
+        "days_of_cover": 50.0,
+        "lead_time_days": 7,
+        "review_period_days": 14,
+        "on_hand": 100,
+    }
+    frame = pd.DataFrame([{**base, **row} for row in rows])
+    frame["projected_stockout_day"] = pd.array(list(frame["projected_stockout_day"]), dtype="Int64")
+    return frame

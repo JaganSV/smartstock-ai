@@ -69,9 +69,20 @@ PowerShell users: call `curl.exe`, not the `curl` alias (which is `Invoke-WebReq
 | `make typecheck` | `mypy` (strict on `app/`) and `tsc --noEmit` |
 | `make format` | Ruff format and Prettier |
 | `make seed` | Seed the dev DB with the deterministic synthetic dataset (seed 42); see "Seeding" |
+| `make recalc` | Recalculate analytics on the dev DB and write a dated snapshot; see "Recalculation" |
 | `make eval` | Placeholder (not implemented until P6) |
 | `make up` / `down` / `logs` | Docker Compose wrappers (see below) |
 
+## Recalculation
+
+`make recalc` runs the analytics on the seeded dev database and writes one dated snapshot (150 `product_metrics` rows plus one `audit_log` row, in one transaction). Run `make migrate` and `make seed` first.
+
+```bash
+make recalc
+cd backend && .venv/Scripts/python -m app.cli recalc --triggered-by cli --report ../docs/evidence/p2_risk_distribution.md
+```
+
+Exit codes: 0 ok, 1 analytics or data error (for example an empty `sales_daily`), 2 bad arguments, 3 database error. The backend also recalculates once at startup when `RECALC_ON_STARTUP=true` (default on when `APP_ENV=local`); a failure is logged and the app keeps running. `GET /api/v1/health/ready` reports `analytics` as `ok`, `no_snapshot` or `error`.
 ## Seeding
 
 `make seed` loads the synthetic dataset into the dev database (run `make migrate` first). It is deterministic: the same seed gives identical data, every time. Re-running replaces the seeded tables in one transaction, so the result never changes.

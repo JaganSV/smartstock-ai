@@ -192,3 +192,41 @@ def test_extended_detector_catches_the_new_forbidden_imports(source: str) -> Non
 
 def test_extended_detector_allows_pandas_numpy_and_stdlib() -> None:
     assert _violations("import pandas as pd\nimport numpy as np\nfrom datetime import date") == []
+
+
+# --- layering (BOB-P2-02): analytics never reaches up; repositories hold no business logic ---
+
+REPOSITORIES_DIR = APP_DIR / "repositories"
+
+
+def test_analytics_does_not_import_services() -> None:
+    offenders = {
+        path.name: bad
+        for path in ANALYTICS_DIR.rglob("*.py")
+        if (bad := _imports_of(path.read_text(encoding="utf-8"), ("app.services",)))
+    }
+    assert offenders == {}
+
+
+def test_repositories_do_not_import_analytics_or_services() -> None:
+    assert len(list(REPOSITORIES_DIR.glob("*.py"))) >= 5
+    offenders = {
+        path.name: bad
+        for path in REPOSITORIES_DIR.rglob("*.py")
+        if (bad := _imports_of(path.read_text(encoding="utf-8"), ("app.analytics", "app.services")))
+    }
+    assert offenders == {}
+
+
+@pytest.mark.parametrize(
+    ("source", "forbidden"),
+    [
+        ("from app.services.analytics_service import RecalculationService", ("app.services",)),
+        ("import app.services", ("app.services",)),
+        ("from app.analytics.risk import classify_risk", ("app.analytics", "app.services")),
+        ("from app import analytics", ("app.analytics", "app.services")),
+        ("def f():\n    from app.services import errors", ("app.analytics", "app.services")),
+    ],
+)
+def test_layering_detector_catches_upward_imports(source: str, forbidden: tuple[str, ...]) -> None:
+    assert _imports_of(source, forbidden) != []

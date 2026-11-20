@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     jwt_secret: SecretStr
     cors_allowed_origins: str = "http://localhost:5173"
+    # FR-B5: recalculate once at startup. Unset = true when APP_ENV is "local", else false.
+    recalc_on_startup: bool | None = None
 
     # watsonx.ai (used from Phase 5). All optional so the app starts without them.
     watsonx_url: str | None = None
@@ -52,6 +54,13 @@ class Settings(BaseSettings):
         if any(origin.strip() == "*" for origin in value.split(",")):
             raise ValueError("Wildcard CORS origins are not allowed")
         return value
+
+    @property
+    def recalc_on_startup_enabled(self) -> bool:
+        """The explicit RECALC_ON_STARTUP value, else True only for ``APP_ENV=local``."""
+        if self.recalc_on_startup is not None:
+            return self.recalc_on_startup
+        return self.app_env == "local"
 
     @property
     def cors_origins(self) -> list[str]:

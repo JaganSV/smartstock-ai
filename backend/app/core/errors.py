@@ -28,6 +28,14 @@ _STATUS_CODES: dict[int, str] = {
 }
 
 
+class DetailedHTTPException(StarletteHTTPException):
+    """An HTTP error whose envelope also carries ``details`` (keys and codes only, no data)."""
+
+    def __init__(self, status_code: int, detail: str, details: Any) -> None:
+        super().__init__(status_code=status_code, detail=detail)
+        self.details = details
+
+
 class ErrorBody(BaseModel):
     code: str
     message: str
@@ -81,7 +89,14 @@ async def http_exception_handler(request: Request, exc: Exception) -> JSONRespon
     status = http_exc.status_code
     code = _STATUS_CODES.get(status, "INTERNAL_ERROR" if status >= 500 else "HTTP_ERROR")
     message = http_exc.detail if isinstance(http_exc.detail, str) else HTTPStatus(status).phrase
-    return _error_response(request, status, code, message, headers=http_exc.headers)
+    return _error_response(
+        request,
+        status,
+        code,
+        message,
+        details=getattr(http_exc, "details", None),
+        headers=http_exc.headers,
+    )
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

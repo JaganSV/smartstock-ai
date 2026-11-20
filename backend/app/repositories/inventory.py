@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from datetime import date
 
-from sqlalchemy import and_, select
+from sqlalchemy import RowMapping, and_, select
 
 from app.models.enums import IncomingStatus
 from app.models.inventory import IncomingStock, InventoryLevel
@@ -29,6 +29,16 @@ class InventoryRepository(Repository[InventoryLevel]):
         )
         return [(level, policy) for level, policy in self.session.execute(stmt).all()]
 
+    def level_rows(self) -> Sequence[RowMapping]:
+        """Plain rows (product_id, warehouse_id, on_hand_qty, committed_qty), ordered by ids."""
+        stmt = select(
+            InventoryLevel.product_id,
+            InventoryLevel.warehouse_id,
+            InventoryLevel.on_hand_qty,
+            InventoryLevel.committed_qty,
+        ).order_by(InventoryLevel.product_id, InventoryLevel.warehouse_id)
+        return self.session.execute(stmt).mappings().all()
+
     def open_incoming(self, until_date: date) -> Sequence[IncomingStock]:
         """OPEN incoming stock expected on or before ``until_date``."""
         stmt = (
@@ -45,6 +55,38 @@ class InventoryRepository(Repository[InventoryLevel]):
 class InventoryPolicyRepository(Repository[InventoryPolicy]):
     model = InventoryPolicy
 
+    def rows(self) -> Sequence[RowMapping]:
+        """Plain rows: product_id, warehouse_id, service_level, review_period_days,
+        safety_stock_override, lead_time_override_days. Ordered by ids."""
+        stmt = select(
+            InventoryPolicy.product_id,
+            InventoryPolicy.warehouse_id,
+            InventoryPolicy.service_level,
+            InventoryPolicy.review_period_days,
+            InventoryPolicy.safety_stock_override,
+            InventoryPolicy.lead_time_override_days,
+        ).order_by(InventoryPolicy.product_id, InventoryPolicy.warehouse_id)
+        return self.session.execute(stmt).mappings().all()
+
 
 class IncomingStockRepository(Repository[IncomingStock]):
     model = IncomingStock
+
+    def open_rows_after(self, after_date: date) -> Sequence[RowMapping]:
+        """Plain rows (product_id, warehouse_id, quantity, expected_arrival_date, status) of OPEN
+        orders expected strictly after ``after_date``."""
+        stmt = (
+            select(
+                IncomingStock.product_id,
+                IncomingStock.warehouse_id,
+                IncomingStock.quantity,
+                IncomingStock.expected_arrival_date,
+                IncomingStock.status,
+            )
+            .where(
+                IncomingStock.status == IncomingStatus.OPEN.value,
+                IncomingStock.expected_arrival_date > after_date,
+            )
+            .order_by(IncomingStock.expected_arrival_date, IncomingStock.id)
+        )
+        return self.session.execute(stmt).mappings().all()

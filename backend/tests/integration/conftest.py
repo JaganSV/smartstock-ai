@@ -14,11 +14,20 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from pydantic import ValidationError
-from sqlalchemy import Engine, create_engine, text
+from sqlalchemy import Engine, create_engine, delete, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.models import AuditLog, MetricSnapshot, ProductMetric
+from data.seed.generator import (
+    DEFAULT_AS_OF,
+    DEFAULT_SEED,
+    build_dataset,
+    count_rows,
+    delete_seeded,
+    seed_database,
+)
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
@@ -106,3 +115,48 @@ def db(migrated_engine: Engine) -> Iterator[Session]:
         session.close()
         transaction.rollback()
         connection.close()
+
+
+# --- analytics fixtures (BOB-P2-02): seeded data plus cleanup of what recalculation writes ---
+
+
+def clean_analytics_outputs(engine: Engine) -> None:
+    """Remove snapshots, metric rows and audit rows (the service commits, so tests clean up)."""
+    with Session(engine) as session, session.begin():
+        session.execute(delete(ProductMetric))
+        session.execute(delete(MetricSnapshot))
+        session.execute(delete(AuditLog))
+
+
+def _clean_all(engine: Engine) -> None:
+    clean_analytics_outputs(engine)  # product_metrics -> products is RESTRICT, so these go first
+    with Session(engine) as session, session.begin():
+        delete_seeded(session)
+
+
+@pytest.fixture
+def empty_engine(migrated_engine: Engine) -> Iterator[Engine]:
+    """Test DB with no seeded data and no analytics output."""
+    _clean_all(migrated_engine)
+    yield migrated_engine
+    _clean_all(migrated_engine)
+
+
+@pytest.fixture(scope="module")
+def _seeded_module_engine(migrated_engine: Engine) -> Iterator[Engine]:
+    _clean_all(migrated_engine)
+    seed_database(migrated_engine, build_dataset(DEFAULT_SEED, DEFAULT_AS_OF))
+    yield migrated_engine
+    _clean_all(migrated_engine)
+
+
+@pytest.fixture
+def seeded_engine(_seeded_module_engine: Engine) -> Iterator[Engine]:
+    """Seed 42 (loaded once per module, reloaded if a test emptied it); outputs cleaned per test."""
+    clean_analytics_outputs(_seeded_module_engine)
+    with Session(_seeded_module_engine) as session:
+        empty = count_rows(session, ["products"])["products"] == 0
+    if empty:
+        seed_database(_seeded_module_engine, build_dataset(DEFAULT_SEED, DEFAULT_AS_OF))
+    yield _seeded_module_engine
+    clean_analytics_outputs(_seeded_module_engine)

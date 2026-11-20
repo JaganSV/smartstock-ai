@@ -5,6 +5,8 @@ from collections.abc import Iterator
 
 os.environ.setdefault("POSTGRES_PASSWORD", "test-db-password")
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-value-0123456789abcdef")
+# No startup recalculation in tests (FR-B5); the startup tests switch it on explicitly.
+os.environ["RECALC_ON_STARTUP"] = "false"
 
 import pytest  # noqa: E402 - env vars must be set before app import
 from fastapi import FastAPI  # noqa: E402 - env vars must be set before app import

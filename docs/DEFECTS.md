@@ -1,6 +1,6 @@
 # Defects
 
-Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-02, BOB-P2-01).
+Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-02, BOB-P2-01, BOB-P2-02).
 
 | ID | Phase | Description | Fix | File |
 | --- | --- | --- | --- | --- |
@@ -24,3 +24,8 @@ Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-
 | D-P2-003 | P2-01 | Test bug: `test_numeric` expected `safe_ceil(2.0000000001) == 3`; 1e-10 is below the 9 dp rounding step, so the correct value is 2. | Corrected the expectation and added a 1e-9 / 4e-10 threshold test. | `backend/tests/unit/analytics/test_numeric.py` |
 | D-P2-004 | P2-01 | Test bug: a `str.replace` that widened `FORBIDDEN` in the import-boundary test also rewrote `SEED_FORBIDDEN` (substring match), making the seed boundary test fail on `data` imports. | Restored `SEED_FORBIDDEN` to the three modules in BOB-P1-02 Section 10. | `backend/tests/unit/test_import_boundaries.py` |
 | D-P2-005 | P2-01 | Draft tests used `type: ignore` for two deliberately illegal calls. | Replaced them with `Any`-typed handles. No `type: ignore` in `app/`, `data/` or `tests/`. | `backend/tests/unit/analytics/test_params.py` |
+| D-P2-006 | P2-02 | `make lint` secret scan failed on `docs/STATUS.md`: full SHA-256 digests (64 hex characters) matched the 40+ character pattern. | Replaced with 16-character prefixes; the full value stays only in `docs/evidence/seed_report.md` (excluded by exact path). | `docs/STATUS.md` |
+| D-P2-007 | P2-02 | mypy rejected the repository row type in the first draft of the new repository methods (rows were typed as a generic mapping). | Annotated the return as `Sequence[RowMapping]` (what `.mappings().all()` returns); the service converts with `dict(row)`. | `backend/app/repositories/*.py`, `backend/app/services/analytics_service.py` |
+| D-P2-008 | P2-02 | Draft `test_startup.py` carried several `type: ignore` comments. mypy does not cover `tests/`, so they were unnecessary. | Removed all of them. The tree has no `type: ignore` in `app/`, `data/` or `tests/`. | `backend/tests/unit/test_startup.py` |
+| D-P2-009 | P2-02 | Integration test bug: the module-scoped seeded fixture was emptied by an earlier test that uses the empty database, so a later test got `NoDataError`. | `seeded_engine` re-seeds when `products` is empty; every test cleans snapshots, metric rows and audit rows before and after. | `backend/tests/integration/conftest.py` |
+| D-P2-010 | P2-02 | Integration test bug: `explain_row` was called without `params` and the payload was read as a dict of metrics (it is a list of entries). | Pass `params` and index the entries by `metric`. The function was correct. | `backend/tests/integration/test_seed_classification.py` |

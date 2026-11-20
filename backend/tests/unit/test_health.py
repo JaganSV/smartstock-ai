@@ -9,9 +9,25 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 
 
+class _Scalars:
+    def __init__(self, snapshot: object | None) -> None:
+        self._snapshot = snapshot
+
+    def first(self) -> object | None:
+        return self._snapshot
+
+
 class _OkSession:
+    """SELECT 1 succeeds; ``snapshot`` is what the latest-snapshot query returns."""
+
+    def __init__(self, snapshot: object | None = None) -> None:
+        self.snapshot = snapshot
+
     def execute(self, *_args: object, **_kwargs: object) -> None:
         return None
+
+    def scalars(self, *_args: object, **_kwargs: object) -> _Scalars:
+        return _Scalars(self.snapshot)
 
 
 class _FailingSession:
@@ -54,7 +70,39 @@ def test_ready_ok(app: FastAPI, client: TestClient) -> None:
     _override(app, _OkSession())
     response = client.get("/api/v1/health/ready")
     assert response.status_code == 200
-    assert response.json() == {"status": "ready", "database": "ok", "ai": "not_configured"}
+    assert response.json() == {
+        "status": "ready",
+        "database": "ok",
+        "ai": "not_configured",
+        "analytics": "no_snapshot",
+    }
+
+
+def test_ready_reports_analytics_ok_when_a_snapshot_exists(
+    app: FastAPI, client: TestClient
+) -> None:
+    _override(app, _OkSession(snapshot=object()))
+    body = client.get("/api/v1/health/ready").json()
+    assert body["analytics"] == "ok"
+    assert (body["status"], body["database"], body["ai"]) == ("ready", "ok", "not_configured")
+
+
+def test_ready_reports_analytics_error_after_a_failed_startup_recalculation(
+    app: FastAPI, client: TestClient
+) -> None:
+    app.state.startup_recalc = "error"
+    _override(app, _OkSession())
+    response = client.get("/api/v1/health/ready")
+    assert response.status_code == 200
+    assert response.json()["analytics"] == "error"
+
+
+def test_ready_snapshot_present_beats_an_earlier_startup_error(
+    app: FastAPI, client: TestClient
+) -> None:
+    app.state.startup_recalc = "error"
+    _override(app, _OkSession(snapshot=object()))
+    assert client.get("/api/v1/health/ready").json()["analytics"] == "ok"
 
 
 def test_ready_db_down_returns_envelope(app: FastAPI, client: TestClient) -> None:
@@ -65,6 +113,7 @@ def test_ready_db_down_returns_envelope(app: FastAPI, client: TestClient) -> Non
     assert error["code"] == "INTERNAL_ERROR"
     assert error["message"] == "Database unavailable"
     assert error["request_id"] == "req-503"
+    assert error["details"] == {"database": "unavailable", "analytics": "error"}
     assert "secret-host" not in response.text
 
 

@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from datetime import date
 
-from sqlalchemy import select
+from sqlalchemy import RowMapping, func, select
 
 from app.models.sales import SalesDaily
 from app.repositories.base import Repository
@@ -13,6 +13,24 @@ class SalesRepository(Repository[SalesDaily]):
     """``get`` takes the composite key ``(product_id, warehouse_id, sale_date)``."""
 
     model = SalesDaily
+
+    def latest_sale_date(self) -> date | None:
+        """``max(sale_date)``: the data's own "now" (ADR-012). None when there are no sales."""
+        return self.session.execute(select(func.max(SalesDaily.sale_date))).scalar_one()
+
+    def window_rows(self, start_date: date, end_date: date) -> Sequence[RowMapping]:
+        """Plain rows (product_id, warehouse_id, sale_date, units_sold), start..end inclusive."""
+        stmt = (
+            select(
+                SalesDaily.product_id,
+                SalesDaily.warehouse_id,
+                SalesDaily.sale_date,
+                SalesDaily.units_sold,
+            )
+            .where(SalesDaily.sale_date >= start_date, SalesDaily.sale_date <= end_date)
+            .order_by(SalesDaily.product_id, SalesDaily.warehouse_id, SalesDaily.sale_date)
+        )
+        return self.session.execute(stmt).mappings().all()
 
     def daily_series(
         self,

@@ -34,3 +34,5 @@ The `make lint`, `make typecheck` and `make test` outputs pasted into a phase re
 ## Coverage
 
 `pytest --cov` reports on `app/` (models and repositories are held at 100%) and on `data/seed/` (target at least 85%).
+
+BOB-P2-02 targets: pp/analytics at least 95% and pp/services at least 90%. Final-tree values: 99.57% and 95.45%. Integration tests that call the recalculation service commit, so they use the seeded_engine and empty_engine fixtures (	ests/integration/conftest.py), which remove snapshots, metric rows and audit rows before and after every test.

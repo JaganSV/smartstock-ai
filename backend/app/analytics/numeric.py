@@ -9,6 +9,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 import numpy as np
 import numpy.typing as npt
+import pandas as pd
 
 SAFE_CEIL_DECIMALS = 9
 
@@ -27,3 +28,19 @@ def safe_ceil_array(values: npt.ArrayLike) -> npt.NDArray[np.int64]:
 def money(value: Decimal | int | str) -> Decimal:
     """Decimal with 2 dp, ROUND_HALF_UP (monetary values)."""
     return Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def float_array(df: pd.DataFrame, column: str) -> npt.NDArray[np.float64]:
+    """Column as float64 with nulls (NaN / <NA> / None) as NaN."""
+    values = pd.to_numeric(df[column], errors="coerce")
+    return np.asarray(values.to_numpy(dtype=np.float64, na_value=np.nan), dtype=np.float64)
+
+
+def round_decimal(value: float | Decimal, places: int) -> Decimal:
+    """``value`` as a Decimal with ``places`` dp, ROUND_HALF_UP (database scale, BP 5.3).
+
+    A float goes through its shortest repr (21.766666666666668 -> 21.7667), never through its
+    binary expansion.
+    """
+    exact = value if isinstance(value, Decimal) else Decimal(repr(float(value)))
+    return exact.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)

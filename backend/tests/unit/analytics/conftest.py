@@ -6,6 +6,7 @@ import pytest
 from app.analytics.inputs import build_metric_inputs
 from app.analytics.metrics import compute_metrics
 from app.analytics.params import AnalyticsParams
+from app.analytics.pipeline import run_analytics
 from data.seed.catalog import SUPPLIERS, WAREHOUSES
 from data.seed.demand import sales_rows
 from data.seed.generator import DEFAULT_SEED, build_dataset
@@ -108,3 +109,9 @@ def seed_inputs(seed_ds: Dataset, seed_params: AnalyticsParams) -> pd.DataFrame:
 @pytest.fixture(scope="session")
 def seed_metrics(seed_inputs: pd.DataFrame, seed_params: AnalyticsParams) -> pd.DataFrame:
     return compute_metrics(seed_inputs, seed_params)
+
+
+@pytest.fixture(scope="session")
+def seed_frame(seed_inputs: pd.DataFrame, seed_params: AnalyticsParams) -> pd.DataFrame:
+    """Metrics + risk classes + flags (``run_analytics``) for the 150 seed rows."""
+    return run_analytics(seed_inputs, seed_params)
