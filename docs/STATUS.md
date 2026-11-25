@@ -262,3 +262,24 @@ Source: `starlette/testclient.py` (Starlette 1.10.0) tries `import httpx2` first
   /auth/login, /auth/me, /admin/audit-log, /admin/ai-interactions, make seed-users, make coverage-summary.
 - New runtime deps: bcrypt, PyJWT. Known: StarletteDeprecationWarning (httpx -> httpx2) recorded, not fixed.
 - Development agent changed to Claude Code from P3-01 closure (ADR-016).
+
+### P3-01 final gates (2026-11-25, clean tree at 0c461d0)
+
+| Gate | Result |
+| --- | --- |
+| `make lint` | PASSED (ruff check: all checks passed; ruff format: 122 files formatted; eslint clean; secret scan passed) |
+| `make typecheck` | PASSED (mypy strict: no issues in 77 source files; `tsc --noEmit` clean) |
+| `make test` | PASSED (backend 705 passed, 1 warning (StarletteDeprecationWarning, C4); total coverage 99%; frontend 4 passed) |
+| AC-3.7 demo | Temporary unauthenticated `GET /api/v1/debug-open`: `test_route_protection.py` 7 failed / 4 passed, naming the route. Route removed: 11 passed |
+| Pre-commit secret scan | ALLOWED with no findings after `DUMMY_HASH` became generated at import (no hash literal in source) |
+
+`make coverage-summary`:
+
+| Package | Statements | Missed | Covered % |
+| --- | --- | --- | --- |
+| app/analytics | 467 | 2 | 99.57 |
+| app/services | 350 | 10 | 97.14 |
+| app/repositories | 205 | 2 | 99.02 |
+| app/api | 110 | 0 | 100.00 |
+| app/core | 242 | 0 | 100.00 |
+| data/seed | 607 | 4 | 99.34 |
