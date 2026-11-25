@@ -1,11 +1,11 @@
 """Reference data repositories."""
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 
 from sqlalchemy import RowMapping, select
 
 from app.models.reference import Category, Supplier, Warehouse
-from app.repositories.base import Repository
+from app.repositories.base import Repository, where_in
 
 
 class CategoryRepository(Repository[Category]):
@@ -45,9 +45,10 @@ class SupplierRepository(Repository[Supplier]):
 class WarehouseRepository(Repository[Warehouse]):
     model = Warehouse
 
-    def rows(self) -> Sequence[RowMapping]:
-        """Plain rows: id, code. Ordered by id."""
+    def rows(self, warehouse_ids: Collection[int] | None = None) -> Sequence[RowMapping]:
+        """Plain rows: id, code. Ordered by id. ``warehouse_ids`` restricts the rows (None: all)."""
         stmt = select(Warehouse.id, Warehouse.code).order_by(Warehouse.id)
+        stmt = where_in(stmt, Warehouse.id, warehouse_ids)
         return self.session.execute(stmt).mappings().all()
 
     def reference_rows(self) -> Sequence[RowMapping]:

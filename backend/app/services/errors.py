@@ -72,3 +72,25 @@ class NoSalesDataError(ServiceError):
 
     def __init__(self) -> None:
         super().__init__("No sales data available.")
+
+
+class SnapshotStaleError(ServiceError):
+    """Recomputed values differ from the stored snapshot row (FR-B6), so nothing is served (409).
+
+    ``fields`` names the mismatched metrics only, never their values.
+    """
+
+    code = "CONFLICT"
+
+    def __init__(self, fields: list[str]) -> None:
+        super().__init__("Underlying data has changed since this snapshot. Run a recalculation.")
+        self.fields = fields
+
+
+class RecalculationLockedError(RecalculationError):
+    """Another recalculation holds the advisory lock; this one did not run (409 on the API)."""
+
+    code = "LOCK_HELD"
+
+    def __init__(self) -> None:
+        super().__init__("A recalculation is already running.")

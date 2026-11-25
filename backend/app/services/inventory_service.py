@@ -4,7 +4,6 @@ Every number comes from the latest snapshot through ``app.analytics.rollup.rollu
 from raw ``sales_daily`` rows. Nothing is written: no commits, no audit rows.
 """
 
-import math
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -45,6 +44,7 @@ from app.schemas.inventory import (
 from app.services.errors import NoSalesDataError, NotFoundError
 from app.services.snapshot_context import (
     SnapshotContext,
+    frame_records,
     latest_snapshot_t0,
     load_snapshot_context,
 )
@@ -61,19 +61,6 @@ class ProductFilters:
     risk_classes: frozenset[str] = frozenset()
     slow_moving: bool | None = None
     q: str | None = None
-
-
-def _clean(value: Any) -> Any:
-    """NaN / NA -> None; everything else unchanged (pandas ``to_dict`` gives Python scalars)."""
-    if value is None:
-        return None
-    if isinstance(value, float) and math.isnan(value):
-        return None
-    return value
-
-
-def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
-    return [{k: _clean(v) for k, v in row.items()} for row in frame.to_dict("records")]
 
 
 # --- existence checks (unknown ids are 404, never an empty result) ---
@@ -134,25 +121,34 @@ def product_summaries(
     return rolled.merge(products.drop(columns=["sku"]), on="product_id", how="inner")
 
 
-def _sort(frame: pd.DataFrame, sort: SortKey, order: SortOrder) -> pd.DataFrame:
+def sort_frame(
+    frame: pd.DataFrame, sort: SortKey, order: SortOrder, ties: tuple[str, ...] = ()
+) -> pd.DataFrame:
     """Stable sort. ``risk`` asc = most severe first, ties by days_of_cover asc then sku.
-    ``days_of_cover`` keeps nulls last in both orders. Other ties break by sku asc."""
+    ``days_of_cover`` keeps nulls last in both orders. Other ties break by sku asc. ``ties`` are
+    extra ascending tie-break columns after sku (row-level lists pass ``("warehouse_code",)``)."""
     ascending = order == "asc"
+    extra = list(ties)
     if sort == "risk":
         work = frame.assign(_rank=frame["risk_class"].map(RISK_RANK))
         return work.sort_values(
-            ["_rank", "days_of_cover", "sku"],
-            ascending=[ascending, True, True],
+            ["_rank", "days_of_cover", "sku", *extra],
+            ascending=[ascending, True, True, *[True] * len(extra)],
             na_position="last",
             kind="mergesort",
         ).drop(columns="_rank")
     if sort == "days_of_cover":
         return frame.sort_values(
-            ["days_of_cover", "sku"], ascending=[ascending, True], na_position="last"
+            ["days_of_cover", "sku", *extra],
+            ascending=[ascending, True, *[True] * len(extra)],
+            na_position="last",
+            kind="mergesort",
         )
     if sort == "name":
-        return frame.sort_values(["name", "sku"], ascending=[ascending, True])
-    return frame.sort_values("sku", ascending=ascending)
+        return frame.sort_values(
+            ["name", "sku", *extra], ascending=[ascending, True, *[True] * len(extra)]
+        )
+    return frame.sort_values(["sku", *extra], ascending=[ascending, *[True] * len(extra)])
 
 
 # --- product list (#8) ---
@@ -183,10 +179,10 @@ def list_products(
         rolled = rolled.loc[rolled["risk_class"].isin(filters.risk_classes)]
     if filters.slow_moving is not None:
         rolled = rolled.loc[rolled["is_slow_moving"] == filters.slow_moving]
-    ordered = _sort(rolled, sort, order)
+    ordered = sort_frame(rolled, sort, order)
     page = ordered.iloc[paging.offset : paging.offset + paging.page_size]
     return ProductPage(
-        items=[ProductSummaryOut.model_validate(r) for r in _records(page)],
+        items=[ProductSummaryOut.model_validate(r) for r in frame_records(page)],
         page=paging.page,
         page_size=paging.page_size,
         total=len(ordered),
@@ -225,7 +221,7 @@ def _warehouse_rows(
     by_warehouse = {p["warehouse_id"]: p for p in policies}
     rows = context.metrics.loc[context.metrics["product_id"] == product["id"]]
     out: list[WarehouseMetricOut] = []
-    for record in sorted(_records(rows), key=lambda r: str(r["warehouse_code"])):
+    for record in sorted(frame_records(rows), key=lambda r: str(r["warehouse_code"])):
         policy = by_warehouse.get(record["warehouse_id"])
         out.append(
             WarehouseMetricOut.model_validate(
@@ -254,7 +250,7 @@ def product_detail(session: Session, product_id: int) -> ProductDetailOut:
         }
     ]
     rows = context.metrics.loc[context.metrics["product_id"] == product_id]
-    rolled = _records(product_summaries(rows, catalogue))
+    rolled = frame_records(product_summaries(rows, catalogue))
     return ProductDetailOut(
         product=_product_out(product),
         warehouses=_warehouse_rows(

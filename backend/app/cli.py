@@ -1,16 +1,20 @@
-"""CLI: ``python -m app.cli recalc [--triggered-by cli] [--report PATH]`` and ``seed-users``.
+"""CLI: ``python -m app.cli recalc [--triggered-by cli] [--report PATH]``, ``seed-users`` and
+``openapi --out PATH``.
 
 Exit codes: 0 success, 1 analytics/data error, 2 bad arguments or a refused ``seed-users`` run,
 3 database error. ``--report`` additionally writes the risk-distribution evidence file (markdown)
 after a successful run. ``seed-users`` creates or updates the four demo users and prints no
-passwords.
+passwords. ``openapi`` writes the app's OpenAPI document as deterministic JSON (sorted keys,
+2-space indent, trailing newline): the API contract baseline (BOB-P3-02b).
 """
 
 import argparse
+import json
 import logging
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -34,6 +38,8 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     recalc.add_argument("--triggered-by", default="cli", help="audit label, [a-z0-9_:-]{1,64}")
     recalc.add_argument("--report", metavar="PATH", help="also write the risk-distribution report")
     commands.add_parser("seed-users", help="create or update the 4 demo users (local/test only)")
+    openapi = commands.add_parser("openapi", help="write the OpenAPI document (contract baseline)")
+    openapi.add_argument("--out", required=True, metavar="PATH", help="output JSON file")
     return parser.parse_args(argv)  # argparse exits with code 2 on bad arguments
 
 
@@ -96,12 +102,29 @@ def _seed_users() -> int:
     return EXIT_OK
 
 
+def openapi_json(schema: dict[str, Any]) -> str:
+    """Deterministic JSON text of an OpenAPI document (also used by the contract test)."""
+    return json.dumps(schema, sort_keys=True, indent=2) + "\n"
+
+
+def _openapi(args: argparse.Namespace) -> int:
+    from app.main import create_app  # imported here: the other commands do not need the app
+
+    path = Path(args.out)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(openapi_json(create_app().openapi()), encoding="utf-8", newline="\n")
+    print(f"OpenAPI document written to {path}")
+    return EXIT_OK
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     if args.command == "recalc":
         return _recalc(args)
     if args.command == "seed-users":
         return _seed_users()
+    if args.command == "openapi":
+        return _openapi(args)
     return EXIT_REFUSED  # unreachable: argparse requires a known command
 
 

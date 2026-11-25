@@ -1,6 +1,6 @@
 SHELL := bash
 
-.PHONY: up down logs db-create migrate dev-backend dev-frontend test test-unit test-backend test-frontend lint lint-backend lint-frontend secret-scan typecheck typecheck-backend typecheck-frontend format seed seed-users recalc coverage-summary eval
+.PHONY: up down logs db-create migrate dev-backend dev-frontend test test-unit test-backend test-frontend lint lint-backend lint-frontend secret-scan typecheck typecheck-backend typecheck-frontend format seed seed-users recalc coverage-summary openapi eval
 
 # Host (native) Python from the Python 3.12 venv; Git Bash path style.
 VENV := .venv/Scripts
@@ -95,6 +95,11 @@ recalc:
 # Per-package coverage table from the .coverage data of the last make test run (BOB-P3-01 B3).
 coverage-summary:
 	cd backend && $(VENV)/python scripts/coverage_summary.py
+
+# Export the OpenAPI document (API contract baseline, BOB-P3-02b). Record every change in
+# docs/STATUS.md (API change log); tests/unit/test_openapi_contract.py enforces it.
+openapi:
+	cd backend && $(VENV)/python -m app.cli openapi --out ../docs/api/openapi-v1.json
 
 eval:
 	@echo "Not implemented until P6"

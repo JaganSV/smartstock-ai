@@ -1,12 +1,12 @@
 """Product repository."""
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 
 from sqlalchemy import RowMapping, func, or_, select
 
 from app.models.product import Product
 from app.models.reference import Category, Supplier
-from app.repositories.base import Repository
+from app.repositories.base import Repository, where_in
 
 LIKE_ESCAPE = "\\"
 
@@ -24,9 +24,9 @@ def contains_pattern(text: str) -> str:
 class ProductRepository(Repository[Product]):
     model = Product
 
-    def active_rows(self) -> Sequence[RowMapping]:
+    def active_rows(self, product_ids: Collection[int] | None = None) -> Sequence[RowMapping]:
         """Active products as plain rows: id, sku, supplier_id, category_id, unit_cost, case_pack,
-        is_active. Ordered by id."""
+        is_active. Ordered by id. ``product_ids`` restricts the rows (None: all)."""
         stmt = (
             select(
                 Product.id,
@@ -40,6 +40,7 @@ class ProductRepository(Repository[Product]):
             .where(Product.is_active.is_(True))
             .order_by(Product.id)
         )
+        stmt = where_in(stmt, Product.id, product_ids)
         return self.session.execute(stmt).mappings().all()
 
     def catalogue_rows(

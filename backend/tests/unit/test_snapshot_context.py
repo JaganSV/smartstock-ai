@@ -12,8 +12,9 @@ from typing import Any, cast
 import pytest
 from sqlalchemy.orm import Session
 
+from app.analytics.params import AnalyticsParams
 from app.services import snapshot_context
-from app.services.errors import NoSnapshotError
+from app.services.errors import NoSnapshotError, NotFoundError
 from app.services.snapshot_context import (
     METRIC_COLUMNS,
     build_context,
@@ -23,6 +24,11 @@ from app.services.snapshot_context import (
 )
 
 T0 = date(2026, 9, 30)
+STORED = AnalyticsParams(t0=T0).to_json()  # what RecalculationService stores
+
+
+def stored(**overrides: Any) -> dict[str, Any]:
+    return {**STORED, **overrides}
 
 
 @dataclass
@@ -30,7 +36,7 @@ class FakeSnapshot:
     id: int = 7
     calculated_at: datetime = datetime(2026, 11, 25, 10, 0, tzinfo=UTC)
     data_as_of_date: date = T0
-    params_json: dict[str, Any] = field(default_factory=lambda: {"spike_threshold": 0.30})
+    params_json: dict[str, Any] = field(default_factory=stored)
 
 
 def _row(product_id: int, trend: str | None, **extra: Any) -> dict[str, Any]:
@@ -56,20 +62,35 @@ ROWS = [_row(1, "0.2999"), _row(2, "0.3000"), _row(3, "0.6000"), _row(4, None)]
 def test_high_demand_uses_the_threshold_of_the_snapshot() -> None:
     default = build_context(FakeSnapshot(), ROWS).metrics
     assert default["is_high_demand"].tolist() == [False, True, True, False]  # >= 0.30; null False
-    strict = build_context(FakeSnapshot(params_json={"spike_threshold": 0.99}), ROWS).metrics
+    strict = build_context(FakeSnapshot(params_json=stored(spike_threshold=0.99)), ROWS).metrics
     assert strict["is_high_demand"].tolist() == [False, False, False, False]
-    loose = build_context(FakeSnapshot(params_json={"spike_threshold": 0.0}), ROWS).metrics
+    loose = build_context(FakeSnapshot(params_json=stored(spike_threshold=0.0)), ROWS).metrics
     assert loose["is_high_demand"].tolist() == [True, True, True, False]
 
 
 def test_snapshot_params_read_t0_and_spike_threshold_from_the_snapshot() -> None:
-    params = snapshot_params(FakeSnapshot(params_json={"spike_threshold": 0.45}))
+    params = snapshot_params(FakeSnapshot(params_json=stored(spike_threshold=0.45)))
     assert params.t0 == T0 and params.spike_threshold == 0.45
+
+
+def test_snapshot_params_rebuild_every_stored_parameter_exactly() -> None:
+    """BOB-P3-02b 7.2: the recompute uses the snapshot's own parameters, z_table included."""
+    changed = stored(
+        overstock_cover_days=150, review_period_days=7, z_table={"0.9": 1.3, "0.95": 1.7}
+    )
+    params = snapshot_params(FakeSnapshot(data_as_of_date=date(2026, 8, 31), params_json=changed))
+    assert params.t0 == date(2026, 8, 31)
+    assert params.overstock_cover_days == 150 and params.review_period_days == 7
+    assert params.z_table == {0.9: 1.3, 0.95: 1.7}
+    assert snapshot_params(FakeSnapshot()) == AnalyticsParams(t0=T0)  # round trip of to_json
 
 
 def test_snapshot_without_a_spike_threshold_is_an_error_not_a_silent_default() -> None:
     with pytest.raises(KeyError):
         snapshot_params(FakeSnapshot(params_json={}))
+    missing = {k: v for k, v in STORED.items() if k != "slow_ratio"}
+    with pytest.raises(KeyError):
+        snapshot_params(FakeSnapshot(params_json=missing))
 
 
 def test_meta_carries_the_snapshot_identity_and_verified_true() -> None:
@@ -106,3 +127,17 @@ def test_load_raises_no_snapshot_error_when_there_is_none(monkeypatch: pytest.Mo
         load_snapshot_context(cast(Session, object()))  # the stub never touches the session
     assert error.value.code == "CONFLICT"
     assert str(error.value) == "No analytics snapshot available. Run a recalculation."
+
+
+def test_load_an_unknown_snapshot_id_is_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    class EmptyRepository:
+        def __init__(self, session: object) -> None:
+            pass
+
+        def get(self, snapshot_id: int) -> None:
+            return None
+
+    monkeypatch.setattr(snapshot_context, "MetricsRepository", EmptyRepository)
+    with pytest.raises(NotFoundError) as error:
+        load_snapshot_context(cast(Session, object()), snapshot_id=999)
+    assert str(error.value) == "Unknown snapshot_id."

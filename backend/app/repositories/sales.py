@@ -1,13 +1,13 @@
 """Daily sales repository."""
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from datetime import date
 
 from sqlalchemy import RowMapping, func, select
 
 from app.models.product import Product
 from app.models.sales import SalesDaily
-from app.repositories.base import Repository
+from app.repositories.base import Repository, where_in
 
 
 class SalesRepository(Repository[SalesDaily]):
@@ -19,8 +19,15 @@ class SalesRepository(Repository[SalesDaily]):
         """``max(sale_date)``: the data's own "now" (ADR-012). None when there are no sales."""
         return self.session.execute(select(func.max(SalesDaily.sale_date))).scalar_one()
 
-    def window_rows(self, start_date: date, end_date: date) -> Sequence[RowMapping]:
-        """Plain rows (product_id, warehouse_id, sale_date, units_sold), start..end inclusive."""
+    def window_rows(
+        self,
+        start_date: date,
+        end_date: date,
+        product_ids: Collection[int] | None = None,
+        warehouse_ids: Collection[int] | None = None,
+    ) -> Sequence[RowMapping]:
+        """Plain rows (product_id, warehouse_id, sale_date, units_sold), start..end inclusive.
+        ``product_ids`` / ``warehouse_ids`` restrict the rows (None: all)."""
         stmt = (
             select(
                 SalesDaily.product_id,
@@ -31,6 +38,8 @@ class SalesRepository(Repository[SalesDaily]):
             .where(SalesDaily.sale_date >= start_date, SalesDaily.sale_date <= end_date)
             .order_by(SalesDaily.product_id, SalesDaily.warehouse_id, SalesDaily.sale_date)
         )
+        stmt = where_in(stmt, SalesDaily.product_id, product_ids)
+        stmt = where_in(stmt, SalesDaily.warehouse_id, warehouse_ids)
         return self.session.execute(stmt).mappings().all()
 
     def series_rows(

@@ -1,6 +1,6 @@
 """Metric snapshot and per-product metric repositories (no business rules, no DataFrames)."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import Any
 
 from sqlalchemy import RowMapping, func, insert, select
@@ -36,6 +36,36 @@ class MetricsRepository(Repository[MetricSnapshot]):
         )
         self.session.flush()
         return len(rows)
+
+    def try_advisory_xact_lock(self, key: int) -> bool:
+        """``pg_try_advisory_xact_lock(key)``: True if taken. Held until the transaction ends."""
+        return bool(self.session.execute(select(func.pg_try_advisory_xact_lock(key))).scalar_one())
+
+    def snapshot_page(self, offset: int, limit: int) -> tuple[Sequence[MetricSnapshot], int]:
+        """One page of snapshots, newest first (``calculated_at``, then id), and the total."""
+        total = self.count_snapshots()
+        stmt = (
+            select(MetricSnapshot)
+            .order_by(MetricSnapshot.calculated_at.desc(), MetricSnapshot.id.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        return self.session.scalars(stmt).all(), total
+
+    def class_counts(self, snapshot_ids: Collection[int]) -> Sequence[RowMapping]:
+        """Rows (snapshot_id, risk_class, rows) counted per snapshot and class (grouped query)."""
+        if not snapshot_ids:
+            return []
+        stmt = (
+            select(
+                ProductMetric.snapshot_id,
+                ProductMetric.risk_class,
+                func.count().label("rows"),
+            )
+            .where(ProductMetric.snapshot_id.in_(list(snapshot_ids)))
+            .group_by(ProductMetric.snapshot_id, ProductMetric.risk_class)
+        )
+        return self.session.execute(stmt).mappings().all()
 
     def count_snapshots(self) -> int:
         return int(

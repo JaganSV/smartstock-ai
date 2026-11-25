@@ -1,14 +1,21 @@
 """Generic repository base. No business logic; callers own the transaction (no commit here)."""
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import Select, SQLColumnExpression, select
 from sqlalchemy.orm import Session
 
 from app.models.base import Base
 
 MAX_LIST_LIMIT = 100
+
+
+def where_in[*Ts](
+    stmt: Select[*Ts], column: SQLColumnExpression[Any], values: Collection[Any] | None
+) -> Select[*Ts]:
+    """``stmt`` restricted to ``column IN values``; unchanged when ``values`` is None."""
+    return stmt if values is None else stmt.where(column.in_(list(values)))
 
 
 class Repository[ModelT: Base]:

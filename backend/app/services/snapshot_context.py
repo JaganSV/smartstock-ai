@@ -6,8 +6,9 @@ and returns them as a DataFrame with the derived ``is_high_demand`` column. The 
 ``params_json`` (BP 7.4 clarification), never the current defaults. No numbers are computed here.
 """
 
+import math
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import date, datetime
 from typing import Any, Protocol
 
@@ -16,10 +17,10 @@ from sqlalchemy.orm import Session
 
 from app.analytics.flags import is_high_demand
 from app.analytics.params import AnalyticsParams
-from app.models.analytics import ProductMetric
+from app.models.analytics import MetricSnapshot, ProductMetric
 from app.repositories.metrics import MetricsRepository
 from app.schemas.common import SnapshotMeta
-from app.services.errors import NoSnapshotError
+from app.services.errors import NoSnapshotError, NotFoundError
 
 # Stored 4-dp Decimals that the analytics functions read as float64 (NULL -> NaN).
 FLOAT_COLUMNS = ("ads_30", "ads_90", "demand_std_30", "days_of_cover", "demand_trend")
@@ -57,12 +58,32 @@ def metrics_frame(rows: Iterable[Mapping[Any, Any]]) -> pd.DataFrame:
     return frame
 
 
+def _clean(value: Any) -> Any:
+    """NaN / NA -> None; everything else unchanged (pandas ``to_dict`` gives Python scalars)."""
+    if value is None:
+        return None
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    return value
+
+
+def frame_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    """Frame rows as dicts for the response schemas, with NaN as None."""
+    return [{k: _clean(v) for k, v in row.items()} for row in frame.to_dict("records")]
+
+
 def snapshot_params(snapshot: SnapshotLike) -> AnalyticsParams:
-    """The parameters the snapshot was calculated with, as far as the read side needs them."""
-    return AnalyticsParams(
-        t0=snapshot.data_as_of_date,
-        spike_threshold=float(snapshot.params_json["spike_threshold"]),
-    )
+    """The exact parameters the snapshot was calculated with, rebuilt from its ``params_json``.
+
+    t0 is the snapshot's ``data_as_of_date``. Every other field must be stored (``KeyError`` if
+    one is missing, never a silent default); ``z_table`` keys go back from strings to floats.
+    """
+    stored = snapshot.params_json
+    scalars = {
+        f.name: stored[f.name] for f in fields(AnalyticsParams) if f.name not in {"t0", "z_table"}
+    }
+    z_table = {float(level): float(z) for level, z in stored["z_table"].items()}
+    return AnalyticsParams(t0=snapshot.data_as_of_date, z_table=z_table, **scalars)
 
 
 def build_context(snapshot: SnapshotLike, rows: Iterable[Mapping[Any, Any]]) -> SnapshotContext:
@@ -77,13 +98,26 @@ def build_context(snapshot: SnapshotLike, rows: Iterable[Mapping[Any, Any]]) -> 
     return SnapshotContext(meta=meta, metrics=frame)
 
 
-def load_snapshot_context(session: Session) -> SnapshotContext:
-    """The latest snapshot and its rows. ``NoSnapshotError`` (409) when none exists."""
+def load_snapshot(session: Session, snapshot_id: int | None = None) -> MetricSnapshot:
+    """The snapshot ``snapshot_id`` (``NotFoundError``, 404, if unknown), or the latest one
+    (``NoSnapshotError``, 409, when none exists)."""
     repository = MetricsRepository(session)
-    snapshot = repository.latest_snapshot()
-    if snapshot is None:
+    if snapshot_id is not None:
+        found = repository.get(snapshot_id)
+        if found is None:
+            raise NotFoundError("Unknown snapshot_id.")
+        return found
+    latest = repository.latest_snapshot()
+    if latest is None:
         raise NoSnapshotError()
-    return build_context(snapshot, repository.snapshot_metric_rows(snapshot.id))
+    return latest
+
+
+def load_snapshot_context(session: Session, snapshot_id: int | None = None) -> SnapshotContext:
+    """A snapshot (default: the latest) and its rows; errors as in ``load_snapshot``."""
+    snapshot = load_snapshot(session, snapshot_id)
+    rows = MetricsRepository(session).snapshot_metric_rows(snapshot.id)
+    return build_context(snapshot, rows)
 
 
 def latest_snapshot_t0(session: Session) -> date | None:

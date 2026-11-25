@@ -294,3 +294,45 @@ Source: `starlette/testclient.py` (Starlette 1.10.0) tries `import httpx2` first
 - Additive fields beyond BP 6.3: `warehouse_code` on `ProductMetricOut` (the detail rows are sorted by it). `DashboardSummaryOut` carries `snapshot_id`/`calculated_at` inside `snapshot`, as the prompt specifies.
 - NFR-01 medians (5 warm requests, in-process client, working tree before commit): categories 6.5 ms, warehouses 8.4 ms, suppliers 8.4 ms, products 31.6 ms, product detail 30.0 ms, product sales 10.9 ms, summary 25.2 ms, sales-trend 44.1 ms, risk-distribution 30.7 ms. All under 500 ms. Final-tree values are in the P3-02a report.
 - Tests (working tree before commit): backend 783 passed; new modules: `app/api/v1/reference.py`, `products.py`, `dashboard.py`, `app/api/errors.py`, `app/services/snapshot_context.py` 100%; `inventory_service.py` 99%; `dashboard_service.py` 97%. `test_route_protection` passes with the nine new routes protected automatically.
+
+## P3-02b status (2026-11-25)
+
+- Endpoints #14-#20: `GET /analytics/metrics` (row-level page of any snapshot, filters, sort),
+  `GET /analytics/metrics/{id}/explain?warehouse_id=`, `POST /analytics/recalculate` (ADMIN,
+  201), `GET /analytics/snapshots` (newest first, per-class counts from one grouped query, no
+  `params_json`), `GET /risk/stockout`, `GET /risk/{id}?warehouse_id=`, `GET /risk/slow-moving`.
+  All need `view_inventory`; #16 also needs `recalculate_analytics`.
+- Exact explanations (FR-B6, `app/services/explain_service.py`): `recompute_rows` reloads the raw
+  data as of the snapshot's `data_as_of_date` through the recalculation's own loader
+  (`analytics_service.load_metric_inputs`, now shared, with optional product and warehouse
+  filters), rebuilds `AnalyticsParams` from the snapshot's `params_json` (every field, `z_table`
+  included), runs the pipeline for the requested rows only and compares 12 fields on the storage
+  scale (`to_snapshot_rows`). Any difference raises 409 `CONFLICT` with `details.fields` (names
+  only). All 150 rows of the seed-42 snapshot recompute to their stored values (test).
+- `GET /risk/stockout` also uses the verified recompute (for the rows on the page) to serve
+  `projected_stockout_day`, which is not stored. So a stale snapshot gives 409 there too.
+- Recalculation lock: `RecalculationService.run` takes `pg_try_advisory_xact_lock(0x53534149)`
+  (SQLAlchemy `func`) in its own transaction, for every caller (API, CLI, startup). A refusal
+  rolls back, writes `ANALYTICS_RECALC_REJECTED` (`reason: lock_held`) and raises
+  `RecalculationLockedError` (API 409 "A recalculation is already running."). The audit rows
+  carry `user_id`, `request_id` and `ip_address` from the API; the CLI and startup pass none.
+  `triggered_by` is `api:<username>` with characters outside `[a-z0-9_-]` mapped to `-`.
+- API recalculation errors: no sales -> 409 "No sales data available."; analytics failure ->
+  500 "Recalculation failed." (code logged); any other failure -> 500 `INTERNAL_ERROR` via the
+  generic handler. Each rolls back: no snapshot, no `ANALYTICS_RECALCULATED` row.
+- OpenAPI baseline: `make openapi` writes `docs/api/openapi-v1.json` (sorted keys, 2-space indent,
+  trailing newline); `tests/unit/test_openapi_contract.py` fails on any difference.
+- Interpretations (none silent): `#20` items add `is_dead_stock` (the sort key; `ads_90` was
+  already in `ProductMetricOut`); `#19` adds `lead_time_days` and `is_high_demand` to the
+  `ProductMetricOut` fields; rule ids are `"R1"`..`"R6"` and the class key is `class` as the
+  prompt names it; `/risk/{id}` lists every OPEN arrival after t0 in `open_incoming` (the
+  projection itself only counts arrivals up to t0 + k).
+
+## API change log
+
+Every change to `docs/api/openapi-v1.json` is listed here (newest first). Export with
+`make openapi`; the contract test fails until the file matches the code.
+
+| Date | Version | Change | Prompt |
+| --- | --- | --- | --- |
+| 2026-11-25 | v1 baseline – P3 complete | First export: endpoints #1-#20 and #33 (health, auth, admin, reference, products, dashboard, analytics, risk). | BOB-P3-02b |
