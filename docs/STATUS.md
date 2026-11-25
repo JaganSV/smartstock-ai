@@ -336,3 +336,29 @@ Every change to `docs/api/openapi-v1.json` is listed here (newest first). Export
 | Date | Version | Change | Prompt |
 | --- | --- | --- | --- |
 | 2026-11-25 | v1 baseline – P3 complete | First export: endpoints #1-#20 and #33 (health, auth, admin, reference, products, dashboard, analytics, risk). | BOB-P3-02b |
+
+### P3-02b final gates (2026-11-25, clean tree at 2d5aa58)
+
+| Gate | Result |
+| --- | --- |
+| `make lint` | PASSED (ruff check: all checks passed; ruff format: 148 files already formatted; eslint clean; secret scan passed) |
+| `make typecheck` | PASSED (mypy strict: no issues in 92 source files; `tsc --noEmit` clean) |
+| `make test` | PASSED (backend 843 passed, 1 warning (StarletteDeprecationWarning, C4); total coverage 99%; frontend 4 passed) |
+| `make openapi && git status --short` | No change (the committed baseline equals the export) |
+| Contract demo | Added an undeclared field to `SnapshotOut` without `make openapi`: `test_openapi_document_equals_the_committed_baseline` FAILED with "API contract changed: ...". Reverted: 4 passed |
+| Pre-commit secret scan | ALLOWED, no secrets found |
+
+NFR-01 medians (5 warm requests, in-process client, committed tree): metrics 16.0 ms, explain 41.6 ms, snapshots 6.6 ms, risk/stockout 61.2 ms, risk detail 40.9 ms, risk/slow-moving 15.8 ms (P3-02a endpoints 4.0-28.1 ms). NFR-03: `POST /analytics/recalculate` median of 3 runs 118.9 ms.
+
+`make coverage-summary`:
+
+| Package | Statements | Missed | Covered % |
+| --- | --- | --- | --- |
+| app/analytics | 467 | 2 | 99.57 |
+| app/services | 792 | 13 | 98.36 |
+| app/repositories | 268 | 2 | 99.25 |
+| app/api | 264 | 0 | 100.00 |
+| app/core | 242 | 0 | 100.00 |
+| data/seed | 607 | 4 | 99.34 |
+
+New modules: `api/v1/analytics.py`, `api/v1/risk.py`, `api/errors.py`, `schemas/analytics.py`, `schemas/risk.py`, `services/risk_service.py` 100%; `explain_service.py` 98%; `snapshot_context.py` 98%; `analytics_service.py` 96%; `cli.py` 98%.
