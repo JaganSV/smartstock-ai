@@ -46,6 +46,7 @@ from app.repositories.products import ProductRepository
 from app.repositories.reference import SupplierRepository, WarehouseRepository
 from app.repositories.sales import SalesRepository
 from app.services.errors import NoDataError, RecalculationError
+from app.services.snapshot_context import metrics_frame
 
 logger = logging.getLogger(__name__)
 
@@ -110,14 +111,7 @@ class RecalculationService:
         is the stored ``demand_trend_pct`` ratio; 4-dp Decimals become float64 (NULL -> NaN);
         ``inventory_value`` stays Decimal.
         """
-        rows = [dict(row) for row in self.metrics.snapshot_metric_rows(snapshot_id)]
-        frame = pd.DataFrame(rows)
-        if frame.empty:
-            return frame
-        frame = frame.rename(columns={"demand_trend_pct": "demand_trend"})
-        for column in ("ads_30", "ads_90", "demand_std_30", "days_of_cover", "demand_trend"):
-            frame[column] = pd.to_numeric(frame[column], errors="coerce").astype("float64")
-        return frame
+        return metrics_frame(self.metrics.snapshot_metric_rows(snapshot_id))
 
     def active_products(self) -> pd.DataFrame:
         """Active products (id, sku, category_id, ...) for KPI filtering."""

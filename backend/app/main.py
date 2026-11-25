@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session, sessionmaker
 
 from app import __version__
-from app.api.v1 import admin, auth, health
+from app.api.v1 import admin, auth, dashboard, health, products, reference
 from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
@@ -56,6 +56,9 @@ def create_app(session_factory: sessionmaker[Session] | None = None) -> FastAPI:
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(admin.router, prefix="/api/v1")
+    app.include_router(reference.router, prefix="/api/v1")
+    app.include_router(products.router, prefix="/api/v1")
+    app.include_router(dashboard.router, prefix="/api/v1")
     return app
 
 

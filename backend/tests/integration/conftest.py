@@ -23,6 +23,7 @@ from app.core.config import Settings
 from app.db.session import get_db
 from app.main import create_app
 from app.models import AiInteraction, AuditLog, MetricSnapshot, ProductMetric, User
+from app.services.analytics_service import RecalculationService
 from app.services.user_seed_service import seed_users
 from data.seed.generator import (
     DEFAULT_AS_OF,
@@ -220,3 +221,33 @@ def api(_demo_users_module: Engine) -> Iterator[Api]:
     with TestClient(app, raise_server_exceptions=False) as client:
         yield Api(client=client, engine=engine)
     _reset_users(engine)
+
+
+# --- read API fixtures (BOB-P3-02a): seed 42 + one recalculation, the demo users, a client ---
+
+
+def _ensure_snapshot(engine: Engine) -> None:
+    """Re-seed if a test emptied the data, then recalculate unless a snapshot already exists."""
+    with Session(engine) as session:
+        empty = count_rows(session, ["products"])["products"] == 0
+    if empty:
+        seed_database(engine, build_dataset(DEFAULT_SEED, DEFAULT_AS_OF))
+    factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    with factory() as session:
+        if session.scalar(select(MetricSnapshot.id).limit(1)) is None:
+            RecalculationService(session).run("test")
+
+
+@pytest.fixture(scope="module")
+def _analysed_module_engine(_seeded_module_engine: Engine) -> Iterator[Engine]:
+    clean_analytics_outputs(_seeded_module_engine)
+    _ensure_snapshot(_seeded_module_engine)
+    yield _seeded_module_engine
+    clean_analytics_outputs(_seeded_module_engine)
+
+
+@pytest.fixture
+def read_api(_analysed_module_engine: Engine, api: Api) -> Api:
+    """``api`` on seed 42 with one snapshot (re-seeded / recalculated if a test removed them)."""
+    _ensure_snapshot(_analysed_module_engine)
+    return api

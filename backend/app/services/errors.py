@@ -48,3 +48,27 @@ class SeedUsersRefusedError(ServiceError):
     """``seed-users`` refused to run (environment or password rules); names settings only."""
 
     code = "SEED_USERS_REFUSED"
+
+
+class NotFoundError(ServiceError):
+    """An id in the path or a filter does not exist. The message names the kind of id only."""
+
+    code = "NOT_FOUND"
+
+
+class NoSnapshotError(ServiceError):
+    """No ``metric_snapshot`` exists yet, so snapshot-derived data cannot be served (409)."""
+
+    code = "CONFLICT"
+
+    def __init__(self) -> None:
+        super().__init__("No analytics snapshot available. Run a recalculation.")
+
+
+class NoSalesDataError(ServiceError):
+    """``sales_daily`` is empty and there is no snapshot, so t0 cannot be derived (409)."""
+
+    code = "CONFLICT"
+
+    def __init__(self) -> None:
+        super().__init__("No sales data available.")

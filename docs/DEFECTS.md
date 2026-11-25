@@ -1,6 +1,6 @@
 # Defects
 
-Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-02, BOB-P2-01, BOB-P2-02).
+Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-02, BOB-P2-01, BOB-P2-02, BOB-P3-02a).
 
 | ID | Phase | Description | Fix | File |
 | --- | --- | --- | --- | --- |
@@ -29,3 +29,6 @@ Defects found and fixed during validation runs (BOB-P0-01-R2, BOB-P1-01, BOB-P1-
 | D-P2-008 | P2-02 | Draft `test_startup.py` carried several `type: ignore` comments. mypy does not cover `tests/`, so they were unnecessary. | Removed all of them. The tree has no `type: ignore` in `app/`, `data/` or `tests/`. | `backend/tests/unit/test_startup.py` |
 | D-P2-009 | P2-02 | Integration test bug: the module-scoped seeded fixture was emptied by an earlier test that uses the empty database, so a later test got `NoDataError`. | `seeded_engine` re-seeds when `products` is empty; every test cleans snapshots, metric rows and audit rows before and after. | `backend/tests/integration/conftest.py` |
 | D-P2-010 | P2-02 | Integration test bug: `explain_row` was called without `params` and the payload was read as a dict of metrics (it is a list of entries). | Pass `params` and index the entries by `metric`. The function was correct. | `backend/tests/integration/test_seed_classification.py` |
+| D-P3-001 | P3-02a | mypy strict rejected the first draft of the new service helpers: they took `Mapping[str, Any]`, but repositories return `RowMapping` (a `Mapping[Any, Any]`). | Typed the parameters `Mapping[Any, Any]`, as `analytics_service._frame` already does. No ignores. | `backend/app/services/inventory_service.py`, `backend/app/services/snapshot_context.py` |
+| D-P3-002 | P3-02a | Test bug: the draft high-demand test expected SKU-009 at WH-BLR to lose the flag at spike_threshold 0.99, but its stored trend is 1.3442 (>= 0.99), so the flag correctly stayed on. | The test now checks SKU-011 at WH-BLR (trend ~0.60) turns off and SKU-009 stays on, which also proves the threshold value is read. The code was correct. | `backend/tests/integration/test_products_api.py` |
+| D-P3-003 | P3-02a | `make lint`: ruff E501 (101 > 100) on a new module docstring. | Shortened the line. | `backend/app/services/inventory_service.py` |

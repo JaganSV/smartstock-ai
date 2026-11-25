@@ -283,3 +283,14 @@ Source: `starlette/testclient.py` (Starlette 1.10.0) tries `import httpx2` first
 | app/api | 110 | 0 | 100.00 |
 | app/core | 242 | 0 | 100.00 |
 | data/seed | 607 | 4 | 99.34 |
+
+## P3-02a status (2026-11-25)
+
+- Endpoints #5-#13 (all `GET`, capability `view_inventory` via `require_capability`): `/reference/categories`, `/reference/warehouses`, `/reference/suppliers` (no `contact_email`), `/products` (paged roll-up, filters, sorting, `q` with escaped wildcards), `/products/{id}`, `/products/{id}/sales`, `/dashboard/summary`, `/dashboard/sales-trend`, `/dashboard/risk-distribution`.
+- Every number comes from `rollup_by_product`, `dashboard_kpis` or `risk_distribution` over the latest snapshot, or from raw `sales_daily` rows. No new calculations. `is_high_demand` reuses `analytics.flags.is_high_demand` with the snapshot's own `params_json["spike_threshold"]` (`app/services/snapshot_context.py`).
+- Snapshot-derived responses carry `snapshot: {snapshot_id, calculated_at, data_as_of_date, verified: true}`. Money is a 2-dp decimal string; ADS, DoC and trend are 4-dp numbers; null stays null.
+- Errors: unknown product or filter id -> 404 `NOT_FOUND`; no snapshot -> 409 `CONFLICT` ("No analytics snapshot available. Run a recalculation."); bad parameters -> 422. Series t0 = latest snapshot `data_as_of_date`, else `max(sale_date)`; with no sales at all -> 409 "No sales data available." (decision made here: there is no date to anchor the series).
+- Canonical seed-42 values reproduced and cross-checked against direct SQL: total_products 50, total_units 73484, inventory_value "89944367.37", low_stock 7, stockout_risk 15, slow_moving 11; rows LOW 121, OVERSTOCK 11, CRITICAL 8, HIGH 4, MEDIUM 3, STOCKOUT 3.
+- Additive fields beyond BP 6.3: `warehouse_code` on `ProductMetricOut` (the detail rows are sorted by it). `DashboardSummaryOut` carries `snapshot_id`/`calculated_at` inside `snapshot`, as the prompt specifies.
+- NFR-01 medians (5 warm requests, in-process client, working tree before commit): categories 6.5 ms, warehouses 8.4 ms, suppliers 8.4 ms, products 31.6 ms, product detail 30.0 ms, product sales 10.9 ms, summary 25.2 ms, sales-trend 44.1 ms, risk-distribution 30.7 ms. All under 500 ms. Final-tree values are in the P3-02a report.
+- Tests (working tree before commit): backend 783 passed; new modules: `app/api/v1/reference.py`, `products.py`, `dashboard.py`, `app/api/errors.py`, `app/services/snapshot_context.py` 100%; `inventory_service.py` 99%; `dashboard_service.py` 97%. `test_route_protection` passes with the nine new routes protected automatically.

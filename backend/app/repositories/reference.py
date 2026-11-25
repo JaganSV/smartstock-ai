@@ -11,6 +11,11 @@ from app.repositories.base import Repository
 class CategoryRepository(Repository[Category]):
     model = Category
 
+    def reference_rows(self) -> Sequence[RowMapping]:
+        """Plain rows: id, code, name. Ordered by code."""
+        stmt = select(Category.id, Category.code, Category.name).order_by(Category.code)
+        return self.session.execute(stmt).mappings().all()
+
 
 class SupplierRepository(Repository[Supplier]):
     model = Supplier
@@ -22,6 +27,20 @@ class SupplierRepository(Repository[Supplier]):
         ).order_by(Supplier.id)
         return self.session.execute(stmt).mappings().all()
 
+    def reference_rows(self) -> Sequence[RowMapping]:
+        """Plain rows without ``contact_email``: id, code, name, default_lead_time_days,
+        min_order_qty, reliability_pct, is_active. Ordered by code."""
+        stmt = select(
+            Supplier.id,
+            Supplier.code,
+            Supplier.name,
+            Supplier.default_lead_time_days,
+            Supplier.min_order_qty,
+            Supplier.reliability_pct,
+            Supplier.is_active,
+        ).order_by(Supplier.code)
+        return self.session.execute(stmt).mappings().all()
+
 
 class WarehouseRepository(Repository[Warehouse]):
     model = Warehouse
@@ -29,4 +48,11 @@ class WarehouseRepository(Repository[Warehouse]):
     def rows(self) -> Sequence[RowMapping]:
         """Plain rows: id, code. Ordered by id."""
         stmt = select(Warehouse.id, Warehouse.code).order_by(Warehouse.id)
+        return self.session.execute(stmt).mappings().all()
+
+    def reference_rows(self) -> Sequence[RowMapping]:
+        """Plain rows: id, code, name, city, region. Ordered by code."""
+        stmt = select(
+            Warehouse.id, Warehouse.code, Warehouse.name, Warehouse.city, Warehouse.region
+        ).order_by(Warehouse.code)
         return self.session.execute(stmt).mappings().all()

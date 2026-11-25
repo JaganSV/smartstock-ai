@@ -68,6 +68,22 @@ class InventoryPolicyRepository(Repository[InventoryPolicy]):
         ).order_by(InventoryPolicy.product_id, InventoryPolicy.warehouse_id)
         return self.session.execute(stmt).mappings().all()
 
+    def rows_for_product(self, product_id: int) -> Sequence[RowMapping]:
+        """``rows()`` columns for one product. Ordered by warehouse id."""
+        stmt = (
+            select(
+                InventoryPolicy.product_id,
+                InventoryPolicy.warehouse_id,
+                InventoryPolicy.service_level,
+                InventoryPolicy.review_period_days,
+                InventoryPolicy.safety_stock_override,
+                InventoryPolicy.lead_time_override_days,
+            )
+            .where(InventoryPolicy.product_id == product_id)
+            .order_by(InventoryPolicy.warehouse_id)
+        )
+        return self.session.execute(stmt).mappings().all()
+
 
 class IncomingStockRepository(Repository[IncomingStock]):
     model = IncomingStock
