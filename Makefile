@@ -1,6 +1,6 @@
 SHELL := bash
 
-.PHONY: up down logs db-create migrate dev-backend dev-frontend test test-unit test-backend test-frontend lint lint-backend lint-frontend secret-scan typecheck typecheck-backend typecheck-frontend format seed recalc coverage-summary eval
+.PHONY: up down logs db-create migrate dev-backend dev-frontend test test-unit test-backend test-frontend lint lint-backend lint-frontend secret-scan typecheck typecheck-backend typecheck-frontend format seed seed-users recalc coverage-summary eval
 
 # Host (native) Python from the Python 3.12 venv; Git Bash path style.
 VENV := .venv/Scripts
@@ -83,6 +83,10 @@ format:
 # Deterministic synthetic data (seed 42, t0 2026-09-30). Refuses to run unless APP_ENV is local/test.
 seed:
 	cd backend && PYTHONIOENCODING=utf-8 $(VENV)/python -m data.seed.generator
+
+# Create or update the 4 demo users from the SEED_USER_PASSWORD_* values in .env (BOB-P3-01).
+seed-users:
+	cd backend && PYTHONIOENCODING=utf-8 $(VENV)/python -m app.cli seed-users
 
 # Recalculate analytics on the dev database and write a dated snapshot (BOB-P2-02).
 recalc:

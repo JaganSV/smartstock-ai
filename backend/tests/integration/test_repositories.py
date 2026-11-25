@@ -326,7 +326,13 @@ def _public_methods(cls: type) -> set[str]:
 def test_insert_only_repositories_have_no_update_or_delete(repo_cls: type[Repository[Any]]) -> None:
     allowed = {"get", "list", "add"}
     if repo_cls is AiInteractionRepository:
-        allowed = allowed | {"set_feedback"}  # the single permitted update
+        allowed = allowed | {"set_feedback", "search"}  # the single permitted update, and a read
+    if repo_cls is AuditRepository:  # read-only helpers for lockout and the admin list (BOB-P3-01)
+        allowed = allowed | {
+            "count_recent_login_failures",
+            "oldest_recent_login_failure",
+            "search",
+        }
     assert _public_methods(repo_cls) == allowed
     for forbidden in MUTATORS:
         assert not hasattr(repo_cls, forbidden), forbidden

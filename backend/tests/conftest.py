@@ -1,10 +1,12 @@
 """Test configuration. Env vars are set before `app` is imported; no real DB is needed."""
 
 import os
+import secrets
 from collections.abc import Iterator
 
+# A fresh 64-hex-character secret per test run (32 bytes of randomness; never a fixed string).
+TEST_JWT_SECRET = os.environ.setdefault("JWT_SECRET", secrets.token_hex(32))
 os.environ.setdefault("POSTGRES_PASSWORD", "test-db-password")
-os.environ.setdefault("JWT_SECRET", "test-jwt-secret-value-0123456789abcdef")
 # No startup recalculation in tests (FR-B5); the startup tests switch it on explicitly.
 os.environ["RECALC_ON_STARTUP"] = "false"
 

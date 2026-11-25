@@ -23,6 +23,7 @@ _STATUS_CODES: dict[int, str] = {
     404: "NOT_FOUND",
     405: "METHOD_NOT_ALLOWED",
     409: "CONFLICT",
+    413: "VALIDATION_ERROR",  # body too large (BP 6.1 has no separate code)
     422: "VALIDATION_ERROR",
     429: "RATE_LIMITED",
 }
@@ -52,15 +53,15 @@ def _request_id(request: Request) -> str | None:
     return str(value) if value else None
 
 
-def _error_response(
-    request: Request,
+def envelope_response(
+    request_id: str | None,
     status_code: int,
     code: str,
     message: str,
     details: Any | None = None,
     headers: Mapping[str, str] | None = None,
 ) -> JSONResponse:
-    request_id = _request_id(request)
+    """The BP 6.1 envelope as a response. Usable outside the exception handlers (middleware)."""
     envelope = ErrorEnvelope(
         error=ErrorBody(code=code, message=message, details=details, request_id=request_id)
     )
@@ -71,6 +72,19 @@ def _error_response(
         status_code=status_code,
         content=envelope.model_dump(mode="json"),
         headers=response_headers,
+    )
+
+
+def _error_response(
+    request: Request,
+    status_code: int,
+    code: str,
+    message: str,
+    details: Any | None = None,
+    headers: Mapping[str, str] | None = None,
+) -> JSONResponse:
+    return envelope_response(
+        _request_id(request), status_code, code, message, details=details, headers=headers
     )
 
 

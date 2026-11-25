@@ -13,13 +13,17 @@ from typing import NoReturn
 import pytest
 from alembic import command
 from alembic.config import Config
+from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from sqlalchemy import Engine, create_engine, delete, text
+from sqlalchemy import Engine, create_engine, delete, select, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings
-from app.models import AuditLog, MetricSnapshot, ProductMetric
+from app.db.session import get_db
+from app.main import create_app
+from app.models import AiInteraction, AuditLog, MetricSnapshot, ProductMetric, User
+from app.services.user_seed_service import seed_users
 from data.seed.generator import (
     DEFAULT_AS_OF,
     DEFAULT_SEED,
@@ -28,6 +32,7 @@ from data.seed.generator import (
     delete_seeded,
     seed_database,
 )
+from tests.integration.auth_helpers import ROLES, Api, demo_settings
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
@@ -160,3 +165,58 @@ def seeded_engine(_seeded_module_engine: Engine) -> Iterator[Engine]:
         seed_database(_seeded_module_engine, build_dataset(DEFAULT_SEED, DEFAULT_AS_OF))
     yield _seeded_module_engine
     clean_analytics_outputs(_seeded_module_engine)
+
+
+# --- authentication fixtures (BOB-P3-01): the 4 demo users seeded through the real service ---
+
+
+def _clean_users(engine: Engine) -> None:
+    with Session(engine) as session, session.begin():
+        session.execute(delete(AuditLog))
+        session.execute(delete(AiInteraction))
+        session.execute(delete(User))
+
+
+@pytest.fixture
+def no_users(migrated_engine: Engine) -> Iterator[Engine]:
+    """Test DB with no users, audit rows or AI interactions, before and after."""
+    _clean_users(migrated_engine)
+    yield migrated_engine
+    _clean_users(migrated_engine)
+
+
+@pytest.fixture(scope="module")
+def _demo_users_module(migrated_engine: Engine) -> Iterator[Engine]:
+    _clean_users(migrated_engine)
+    with Session(migrated_engine) as session:
+        seed_users(session, demo_settings())
+    yield migrated_engine
+    _clean_users(migrated_engine)
+
+
+def _reset_users(engine: Engine) -> None:
+    """Undo what a test did to the four users (role, active flag) and drop its audit rows."""
+    with Session(engine) as session, session.begin():
+        session.execute(delete(AuditLog))
+        session.execute(delete(AiInteraction))
+        for username, role in ROLES.items():
+            user = session.scalars(select(User).where(User.username == username)).one()
+            user.role, user.is_active = role, True
+
+
+@pytest.fixture
+def api(_demo_users_module: Engine) -> Iterator[Api]:
+    """An app on the test database with the four demo users and an empty audit log."""
+    engine = _demo_users_module
+    _reset_users(engine)
+    factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    app = create_app(factory)
+
+    def override() -> Iterator[Session]:
+        with factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override
+    with TestClient(app, raise_server_exceptions=False) as client:
+        yield Api(client=client, engine=engine)
+    _reset_users(engine)

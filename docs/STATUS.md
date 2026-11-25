@@ -255,3 +255,10 @@ Full text:
 ```
 
 Source: `starlette/testclient.py` (Starlette 1.10.0) tries `import httpx2` first and, if missing, falls back to `httpx` and emits this warning. `fastapi.testclient` re-exports Starlette's `TestClient`, so the warning fires on import. The only real fix is to add `httpx2` as a dev dependency (a new package, outside the pinned set), so it is **not fixed** and is recorded here. Suppressing it with a `filterwarnings` entry was not done, to avoid hiding future deprecations. Proposal for the architect: swap `httpx==0.28.1` for `httpx2` in the dev extras once a version is approved.
+
+## P3-01 status (2026-11-24)
+
+- Auth (bcrypt + PyJWT, ADR-015), RBAC (ROLE_MATRIX = BP §10.2), audit-derived lockout, 1 MB request limit, Page[T],
+  /auth/login, /auth/me, /admin/audit-log, /admin/ai-interactions, make seed-users, make coverage-summary.
+- New runtime deps: bcrypt, PyJWT. Known: StarletteDeprecationWarning (httpx -> httpx2) recorded, not fixed.
+- Development agent changed to Claude Code from P3-01 closure (ADR-016).

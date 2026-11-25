@@ -26,3 +26,25 @@ class NoDataError(RecalculationError):
     """There is nothing to analyse: ``sales_daily`` is empty, so t0 cannot be derived."""
 
     code = "NO_DATA"
+
+
+class AuthenticationError(ServiceError):
+    """Wrong username or password, or an inactive user. One generic message for all of them."""
+
+    code = "UNAUTHENTICATED"
+
+
+class AccountLockedError(ServiceError):
+    """Too many recent failed logins for this username. ``retry_after`` is in seconds."""
+
+    code = "RATE_LIMITED"
+
+    def __init__(self, retry_after: int) -> None:
+        super().__init__("Too many failed login attempts. Try again later.")
+        self.retry_after = retry_after
+
+
+class SeedUsersRefusedError(ServiceError):
+    """``seed-users`` refused to run (environment or password rules); names settings only."""
+
+    code = "SEED_USERS_REFUSED"

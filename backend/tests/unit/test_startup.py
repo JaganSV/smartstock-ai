@@ -18,6 +18,7 @@ from app.services.analytics_service import (
     recalculate_on_startup,
 )
 from app.services.errors import RecalculationError
+from tests.conftest import TEST_JWT_SECRET
 
 
 class _Result:
@@ -80,7 +81,7 @@ def test_recalc_on_startup_default_and_override(
 ) -> None:
     settings = Settings(
         postgres_password="x",
-        jwt_secret="y",
+        jwt_secret=TEST_JWT_SECRET,
         app_env=app_env,
         recalc_on_startup=explicit,
         _env_file=None,

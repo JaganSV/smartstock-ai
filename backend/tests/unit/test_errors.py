@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel, ValidationError
 
 from app.core.config import Settings
+from tests.conftest import TEST_JWT_SECRET
 
 
 class _Payload(BaseModel):
@@ -65,21 +66,21 @@ def test_unknown_route_uses_envelope(client: TestClient) -> None:
 def test_settings_do_not_expose_secrets() -> None:
     settings = Settings(
         postgres_password="pg-super-secret",
-        jwt_secret="jwt-super-secret-value",
+        jwt_secret=TEST_JWT_SECRET,
         watsonx_api_key="wx-super-secret",
     )
     for rendered in (repr(settings), str(settings)):
         assert "pg-super-secret" not in rendered
-        assert "jwt-super-secret-value" not in rendered
+        assert TEST_JWT_SECRET not in rendered
         assert "wx-super-secret" not in rendered
-    assert settings.jwt_secret.get_secret_value() == "jwt-super-secret-value"
+    assert settings.jwt_secret.get_secret_value() == TEST_JWT_SECRET
     assert "pg-super-secret" not in repr(settings.sqlalchemy_url)
 
 
 def test_missing_watsonx_settings_do_not_block_startup() -> None:
     settings = Settings(
         postgres_password="x",
-        jwt_secret="y",
+        jwt_secret=TEST_JWT_SECRET,
         _env_file=None,
     )
     assert settings.watsonx_api_key is None
@@ -89,6 +90,6 @@ def test_wildcard_cors_rejected() -> None:
     with pytest.raises(ValidationError):
         Settings(
             postgres_password="x",
-            jwt_secret="y",
+            jwt_secret=TEST_JWT_SECRET,
             cors_allowed_origins="*",
         )

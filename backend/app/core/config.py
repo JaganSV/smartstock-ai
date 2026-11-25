@@ -2,14 +2,17 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
 
 # Repo-root .env (backend/app/core/config.py -> repo root), independent of the working directory.
 # Absent in containers, where variables come from the environment.
 _ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
+
+MIN_JWT_SECRET_BYTES = 32
 
 
 class Settings(BaseSettings):
@@ -20,6 +23,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",  # .env also carries frontend (VITE_*) variables
+        hide_input_in_errors=True,  # a rejected secret must never be echoed in the error text
     )
 
     # Database
@@ -35,9 +39,20 @@ class Settings(BaseSettings):
     app_env: str = "local"
     log_level: str = "INFO"
     jwt_secret: SecretStr
+    jwt_algorithm: Literal["HS256"] = "HS256"  # fixed (ADR-015); any other value is rejected
+    access_token_minutes: int = Field(default=60, ge=5, le=480)
+    login_max_failures: int = Field(default=5, ge=1)
+    login_lock_minutes: int = Field(default=15, ge=1)
+    max_request_bytes: int = Field(default=1_048_576, ge=1)
     cors_allowed_origins: str = "http://localhost:5173"
     # FR-B5: recalculate once at startup. Unset = true when APP_ENV is "local", else false.
     recalc_on_startup: bool | None = None
+
+    # Demo-user passwords: read only by `python -m app.cli seed-users`, never by the running app.
+    seed_user_password_admin: SecretStr | None = None
+    seed_user_password_manager: SecretStr | None = None
+    seed_user_password_analyst: SecretStr | None = None
+    seed_user_password_executive: SecretStr | None = None
 
     # watsonx.ai (used from Phase 5). All optional so the app starts without them.
     watsonx_url: str | None = None
@@ -47,6 +62,13 @@ class Settings(BaseSettings):
     watsonx_chat_model_id: str | None = None
     watsonx_fallback_chat_model_id: str | None = None
     watsonx_embed_model_id: str | None = None
+
+    @field_validator("jwt_secret")
+    @classmethod
+    def _jwt_secret_long_enough(cls, value: SecretStr) -> SecretStr:
+        if len(value.get_secret_value().encode("utf-8")) < MIN_JWT_SECRET_BYTES:
+            raise ValueError(f"JWT_SECRET must be at least {MIN_JWT_SECRET_BYTES} bytes")
+        return value
 
     @field_validator("cors_allowed_origins")
     @classmethod
