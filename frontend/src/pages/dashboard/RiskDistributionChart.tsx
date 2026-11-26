@@ -118,9 +118,21 @@ export default function RiskDistributionChart({
                 ))}
                 <LabelList
                   dataKey="label"
-                  position="right"
-                  fill={theme.palette.text.primary}
-                  fontSize={12}
+                  content={(props) => {
+                    const x = Number(props.x ?? 0) + Number(props.width ?? 0) + 6;
+                    const y = Number(props.y ?? 0) + Number(props.height ?? 0) / 2;
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        dominantBaseline="central"
+                        fill={theme.palette.text.primary}
+                        fontSize={12}
+                      >
+                        {props.value}
+                      </text>
+                    );
+                  }}
                 />
               </Bar>
             </BarChart>

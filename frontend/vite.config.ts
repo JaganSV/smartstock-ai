@@ -10,6 +10,12 @@ export default defineConfig({
     // Needed for file-change detection when running in a Docker bind mount / on Windows.
     watch: { usePolling: true },
   },
+  // Dev server only: scan every app source at startup so the dependencies of lazily loaded routes
+  // are pre-bundled. Otherwise Vite finds them on the first visit to a lazy page, re-optimises and
+  // reloads the page, and a reload ends the in-memory session (ADR-006). Not used by `vite build`.
+  optimizeDeps: {
+    entries: ['index.html', 'src/**/*.tsx', '!src/**/*.test.tsx', '!src/test/**'],
+  },
   test: {
     environment: 'jsdom',
     globals: true,

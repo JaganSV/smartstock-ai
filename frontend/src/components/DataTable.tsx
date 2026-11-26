@@ -30,6 +30,8 @@ export interface Column<T> {
   sortKey?: string;
   align?: 'left' | 'right' | 'center';
   width?: number | string;
+  /** Keep the cell on one line (short codes such as a SKU). */
+  nowrap?: boolean;
 }
 
 interface Props<T> {
@@ -136,7 +138,11 @@ export default function DataTable<T>({
               </TableCell>
             ) : null}
             {columns.map((column) => (
-              <TableCell key={column.id} align={column.align}>
+              <TableCell
+                key={column.id}
+                align={column.align}
+                sx={column.nowrap ? { whiteSpace: 'nowrap' } : undefined}
+              >
                 {column.render(row)}
               </TableCell>
             ))}

@@ -18,9 +18,9 @@ export const CAPTION = 'Sorted by severity, then days of cover';
 
 export const COLUMNS: Column<StockoutRiskRow>[] = [
   // Plain text until P4-03 adds the product page.
-  { id: 'sku', header: 'SKU', render: (row) => row.sku },
+  { id: 'sku', header: 'SKU', render: (row) => row.sku, nowrap: true },
   { id: 'name', header: 'Product', render: (row) => row.name },
-  { id: 'warehouse', header: 'Warehouse', render: (row) => row.warehouse_code },
+  { id: 'warehouse', header: 'Warehouse', render: (row) => row.warehouse_code, nowrap: true },
   { id: 'risk', header: 'Risk', render: (row) => <RiskBadge risk={row.risk_class} /> },
   {
     id: 'available',

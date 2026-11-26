@@ -125,24 +125,26 @@ export default function SalesTrendChart({ filters, ready, reloadSignal }: Props)
         <Typography variant="body2" sx={{ mt: 1 }} data-testid="trend-sum">
           {SUM_LABEL}: {formatNumber(totalUnits)} units · {formatMoney(totalRevenue)} revenue
         </Typography>
-        <Box component="table" sx={visuallyHidden}>
-          <caption>Daily sales, {summary}</caption>
-          <thead>
-            <tr>
-              <th scope="col">Date</th>
-              <th scope="col">Units</th>
-              <th scope="col">Revenue</th>
-            </tr>
-          </thead>
-          <tbody>
-            {series.map((point) => (
-              <tr key={point.date}>
-                <td>{formatDate(point.date)}</td>
-                <td>{formatNumber(point.units)}</td>
-                <td>{formatMoney(point.revenue)}</td>
+        <Box sx={visuallyHidden}>
+          <table>
+            <caption>Daily sales, {summary}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Units</th>
+                <th scope="col">Revenue</th>
               </tr>
-            ))}
-          </tbody>
+            </thead>
+            <tbody>
+              {series.map((point) => (
+                <tr key={point.date}>
+                  <td>{formatDate(point.date)}</td>
+                  <td>{formatNumber(point.units)}</td>
+                  <td>{formatMoney(point.revenue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Box>
       </>
     );
