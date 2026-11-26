@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.config import Settings, get_settings
+from app.core.rbac import capabilities_for
 from app.schemas.auth import LoginRequest, LoginResponse, MeResponse, UserOut
 from app.services.auth_service import AuthService, RequestContext
 from app.services.errors import AccountLockedError, AuthenticationError
@@ -51,4 +52,10 @@ def login(
 
 @router.get("/me", response_model=MeResponse)
 def me(user: CurrentUser) -> MeResponse:
-    return MeResponse(id=user.id, username=user.username, role=user.role, is_active=user.is_active)
+    return MeResponse(
+        id=user.id,
+        username=user.username,
+        role=user.role,
+        is_active=user.is_active,
+        capabilities=capabilities_for(user.role),
+    )

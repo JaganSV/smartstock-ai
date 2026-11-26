@@ -2,7 +2,7 @@
 
 Capability keys are the left column of the BP 10.2 table. Do not add, remove or rename a
 capability without an architect decision. ``GET /auth/me`` is open to any authenticated role and is
-not a matrix capability.
+not a matrix capability; it returns the caller's capability keys (``capabilities_for``).
 """
 
 from collections.abc import Mapping
@@ -41,3 +41,11 @@ ROLE_MATRIX: Mapping[str, frozenset[UserRole]] = {
 def allowed_roles(capability: str) -> frozenset[UserRole]:
     """Roles that hold ``capability``. An unknown capability is a programming error (KeyError)."""
     return ROLE_MATRIX[capability]
+
+
+def capabilities_for(role: UserRole | str) -> list[str]:
+    """The capability keys ``role`` holds in ``ROLE_MATRIX``, sorted (``GET /auth/me``, P4-01).
+
+    The frontend decides what to show from this list only; the routes still enforce every check.
+    """
+    return sorted(key for key, roles in ROLE_MATRIX.items() if role in roles)

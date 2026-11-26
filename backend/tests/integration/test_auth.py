@@ -62,8 +62,44 @@ def test_each_seeded_user_can_log_in_and_me_returns_the_role(api: Api, username:
         "username": username,
         "role": ROLES[username],
         "is_active": True,
+        "capabilities": CAPABILITIES[username],
     }
     assert "X-Request-ID" in response.headers
+
+
+# BP 10.2 role matrix rows, written out (not derived from ROLE_MATRIX): a matrix change fails here.
+CAPABILITIES = {
+    "admin": [
+        "ask_ai",
+        "decide_recommendations",
+        "export_approved_csv",
+        "generate_executive_report",
+        "generate_recommendations",
+        "manage_documents",
+        "recalculate_analytics",
+        "view_governance",
+        "view_inventory",
+    ],
+    "manager": [
+        "ask_ai",
+        "decide_recommendations",
+        "export_approved_csv",
+        "generate_executive_report",
+        "generate_recommendations",
+        "view_inventory",
+    ],
+    "analyst": ["ask_ai", "view_inventory"],
+    "executive": ["ask_ai", "generate_executive_report", "view_inventory"],
+}
+
+
+@pytest.mark.parametrize("username", USERNAMES)
+def test_me_returns_exactly_the_role_matrix_row_sorted(api: Api, username: str) -> None:
+    """P4-01 (v1.1 additive): ``capabilities`` is the role's BP 10.2 row, sorted."""
+    me = api.client.get("/api/v1/auth/me", headers=api.headers(username))
+    assert me.status_code == 200
+    capabilities = me.json()["capabilities"]
+    assert capabilities == CAPABILITIES[username] == sorted(capabilities)
 
 
 def test_username_is_case_insensitive(api: Api) -> None:

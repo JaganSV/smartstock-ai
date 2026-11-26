@@ -328,6 +328,52 @@ Source: `starlette/testclient.py` (Starlette 1.10.0) tries `import httpx2` first
   prompt names it; `/risk/{id}` lists every OPEN arrival after t0 in `open_incoming` (the
   projection itself only counts arrivals up to t0 + k).
 
+## P4-01 status (2026-11-26)
+
+- Dependencies (commit 1, approved in BOB-P4-01 7.1; versions pinned exactly):
+
+  | Package | Before | After | Why |
+  | --- | --- | --- | --- |
+  | react-router-dom | 6.30.6 | removed | v7 merges it into `react-router` |
+  | react-router | (via -dom) | 7.18.7 | runtime advisories; v8 needs React 19, so v7 (supports React 18) |
+  | vite | 5.4.21 | 8.3.8 | high (vite, esbuild) |
+  | @vitejs/plugin-react | 4.7.0 | 6.3.0 | peer of Vite 8 |
+  | vitest | 2.1.9 | 5.1.2 | critical (vitest, tinypool), moderate (@vitest/mocker, vite-node) |
+  | @vitest/coverage-v8 | – | 5.1.2 | new dev dep (approved): `vitest --coverage` |
+  | openapi-typescript | – | 7.13.0 | new dev dep (approved): `npm run gen:api` |
+
+  `npm audit` before: **8 vulnerabilities (2 critical, 1 high, 5 moderate)**; after: **found 0
+  vulnerabilities**. Nothing left to document. `npm audit fix --force` was not used. This closes
+  C3 (the BOB-P1-01 audit note).
+- Backend (API v1.1, additive): `GET /auth/me` returns `capabilities`, the role's BP 10.2 row,
+  sorted (`app.core.rbac.capabilities_for`). Integration test pins each of the 4 rows. No other
+  backend change.
+- Typed client: `npm run gen:api` writes `frontend/src/api/schema.d.ts` from
+  `docs/api/openapi-v1.json` (committed). `src/api/schema.fresh.test.ts` regenerates it and fails
+  if the committed file differs; `src/api/types.ts` names the shapes the UI uses.
+- Auth (ADR-006): `AuthProvider` holds `{token, user, capabilities, expiresAt}` in React state only
+  (test: no localStorage, sessionStorage or cookie writes); a refresh means signing in again.
+  Automatic sign-out at `expiresAt` ("Your session expired. Please sign in again.").
+- API client: Bearer token and a UUID `X-Request-ID` on every request; failures become
+  `ApiError {status, code, message, requestId, details, retryAfter}` from the BP 6.1 envelope;
+  401 (except login) signs out ("Please sign in again."); 403 shows "You don't have permission
+  for this action."; network and 5xx show "Service unavailable. Try again later." with the
+  reference. An error boundary shows a safe fallback.
+- Navigation is a typed config (`src/layout/navConfig.ts`) filtered by `capabilities`; the UI never
+  checks a role name (the role is only displayed). Now: Dashboard (placeholder, `view_inventory`)
+  and Admin > Audit log (`view_governance`). Routes `/login`, `/`, `/dashboard`,
+  `/admin/audit-log`, `*`.
+- Components: `VerifiedDataPanel`, `AiNarrativePanel`, `KpiTile`, `RiskBadge`, `DataTable`,
+  `ErrorState`, `ApiErrorSnackbar`, `ErrorBoundary`; formatters in `src/lib/format.ts` (money from
+  the decimal string, no float). Risk colours and their AA contrast are in `src/theme/theme.ts`
+  and checked by `theme.test.ts`.
+- The P0 Home page and its test are removed; the health check survives as a small
+  "Backend: ok/unavailable" indicator at the foot of the navigation drawer.
+- Known limitation: the backend's CORS setup exposes only `X-Request-ID`, so a browser on another
+  origin cannot read `Retry-After`; the 429 message then says "Try again later." instead of the
+  minutes. Exposing `Retry-After` is a one-line CORS change that needs an architect decision
+  (BOB-P4-01 kept CORS unchanged).
+
 ## API change log
 
 Every change to `docs/api/openapi-v1.json` is listed here (newest first). Export with
@@ -335,6 +381,7 @@ Every change to `docs/api/openapi-v1.json` is listed here (newest first). Export
 
 | Date | Version | Change | Prompt |
 | --- | --- | --- | --- |
+| 2026-11-26 | v1.1 – additive: `capabilities` on `GET /auth/me` (P4-01) | `MeResponse` gains `capabilities: string[]` (the role's BP 10.2 capability keys, sorted). No field removed or renamed. | BOB-P4-01 |
 | 2026-11-25 | v1 baseline – P3 complete | First export: endpoints #1-#20 and #33 (health, auth, admin, reference, products, dashboard, analytics, risk). | BOB-P3-02b |
 
 ### P3-02b final gates (2026-11-25, clean tree at 2d5aa58)

@@ -532,6 +532,14 @@
       },
       "MeResponse": {
         "properties": {
+          "capabilities": {
+            "description": "Capability keys the role holds in the BP 10.2 role matrix, sorted. The UI decides what to show from these only; the API still enforces every check.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -553,7 +561,8 @@
           "id",
           "username",
           "role",
-          "is_active"
+          "is_active",
+          "capabilities"
         ],
         "title": "MeResponse",
         "type": "object"

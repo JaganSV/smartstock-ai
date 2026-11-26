@@ -44,3 +44,7 @@ class MeResponse(BaseModel):
     username: str
     role: str
     is_active: bool
+    capabilities: list[str] = Field(
+        description="Capability keys the role holds in the BP 10.2 role matrix, sorted. The UI "
+        "decides what to show from these only; the API still enforces every check."
+    )
