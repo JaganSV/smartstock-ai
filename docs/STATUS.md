@@ -409,3 +409,35 @@ NFR-01 medians (5 warm requests, in-process client, committed tree): metrics 16.
 | data/seed | 607 | 4 | 99.34 |
 
 New modules: `api/v1/analytics.py`, `api/v1/risk.py`, `api/errors.py`, `schemas/analytics.py`, `schemas/risk.py`, `services/risk_service.py` 100%; `explain_service.py` 98%; `snapshot_context.py` 98%; `analytics_service.py` 96%; `cli.py` 98%.
+
+### P4-01 final gates (2026-11-26, clean tree at fd520aa)
+
+| Gate | Result |
+| --- | --- |
+| `git status --short` | empty |
+| `npm audit` (frontend) | found 0 vulnerabilities (before P4-01: 8 = 2 critical, 1 high, 5 moderate) |
+| `make lint` | ruff: All checks passed, 148 files already formatted; eslint clean; Secret scan passed |
+| `make typecheck` | mypy: no issues found in 92 source files; tsc clean |
+| `make test` | backend 847 passed, 1 warning (known Starlette deprecation, C4), TOTAL 99%; frontend 12 files, 138 tests passed; exit 0 |
+| `npx vitest run --coverage` | lines 98.87% (351/355), statements 97.76%, branches 94.87%, functions 95.52% (threshold: lines 80%) |
+| `make openapi && git status --short` | no change |
+
+| Package | Statements | Missed | Covered % |
+| --- | --- | --- | --- |
+| app/analytics | 467 | 2 | 99.57 |
+| app/services | 792 | 13 | 98.36 |
+| app/repositories | 268 | 2 | 99.25 |
+| app/api | 265 | 0 | 100.00 |
+| app/core | 244 | 0 | 100.00 |
+| data/seed | 607 | 4 | 99.34 |
+
+Browser checks (headless Edge at 1280 x 800 driven over the DevTools protocol; committed code;
+backend on port 8001 and Vite on 5173 with `VITE_API_BASE_URL` overridden for that process only,
+because port 8000 was still held by the stale 18 Nov server): 17/17 passed. Signed-out `/` goes
+to `/login`; a wrong password shows "Invalid username or password."; admin lands on the dashboard
+with Admin > Audit log in the menu, name and role in the app bar; no localStorage,
+sessionStorage or cookie; no horizontal scroll at 1280 px; the audit log loads rows, shows the
+server total, expands a row to JSON and loads page 2; a refresh returns to `/login`; analyst has
+no Audit log menu item; typing `/admin/audit-log` as analyst shows the 403 page.
+Screenshots: `docs/evidence/p4-login.png`, `p4-shell-admin.png`, `p4-audit-log.png`,
+`p4-forbidden-analyst.png`.
