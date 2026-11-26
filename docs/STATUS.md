@@ -562,3 +562,54 @@ still held by the stale 18 Nov server, so the backend ran on 8001 and Vite on 51
   modules cold.
 - Screenshots: `docs/evidence/p4-dashboard-admin.png`, `p4-dashboard-filtered-wh-mum.png`,
   `p4-dashboard-analyst.png`, `p4-dashboard-empty-state.png`, `p4-lockout-minutes.png`.
+
+### P4-03 final gates (2026-11-26, clean tree at 26573f3) – P4 complete
+
+| Gate | Result |
+| --- | --- |
+| `git status --short` | empty |
+| `npm audit` | found 0 vulnerabilities |
+| `npm run build` | no chunk warning; largest `SalesSeriesChart` (Recharts, shared) 400.50 kB, `useSlotProps` (MUI) 229.49 kB, `index` 188.06 kB, `ProductDetail` 31.45 kB |
+| `make lint` | ruff: All checks passed, 148 files already formatted; eslint clean; Secret scan passed |
+| `make typecheck` | mypy: no issues found in 92 source files; tsc clean |
+| `make test` | backend 848 passed, 1 warning (C4), TOTAL 99%; frontend 18 files, 219 tests passed; exit 0 |
+| `npx vitest run --coverage` | lines 98.33% (887/902), statements 97.03%, branches 94.36%, functions 93.91% (threshold 80%) |
+| `make openapi && git status --short` | no change (no API contract change) |
+
+| Package | Statements | Missed | Covered % |
+| --- | --- | --- | --- |
+| app/analytics | 467 | 2 | 99.57 |
+| app/services | 792 | 13 | 98.36 |
+| app/repositories | 268 | 2 | 99.25 |
+| app/api | 265 | 0 | 100.00 |
+| app/core | 244 | 0 | 100.00 |
+| data/seed | 607 | 4 | 99.34 |
+
+Browser checks (headless Edge over the DevTools protocol, 1280 x 800; port 8000 still held by the
+stale 18 Nov server, so the backend ran on 8001 and Vite on 5173 with `VITE_API_BASE_URL`
+overridden for that process only): 29/29 passed.
+
+- `/risk`: 15 rows, SKU-001/002/003 STOCKOUT, then 8 CRITICAL (days of cover 3.2 … 14.1
+  ascending), then 4 HIGH; SKU links carry `warehouse_id`; the WH-MUM filter (8 rows) survives a
+  reload and sign-in.
+- `/risk/slow-moving`: 11 rows; SKU-022, SKU-021, SKU-023 @ WH-BLR dead stock first, then
+  slow-moving.
+- `/products`: 50 products; typing `sku-00` (debounced) gives SKU-001…009 (9 rows); the CRITICAL
+  chip leaves only CRITICAL rows.
+- The dashboard top-10 link opens `/products/154?warehouse_id=10` (SKU-004 @ WH-MUM): available
+  223, on hand 242, committed 19, ADS 30 21.5333, lead time 14 days, SS 47, ROP 349, days of
+  cover "10.4 days" (formatDays shows 1 dp; `/explain` shows 10.356), Q 432; CRITICAL, fired rule
+  R2 `R2_STOCKOUT_BEFORE_REPLENISHMENT`; projection day 0 to 14 with the marker "Projected
+  stockout: Day 11 (11 Oct 2026)"; explanations expand to 12 metrics; switching to WH-BLR sets
+  `?warehouse_id=11`.
+- SKU-024 @ WH-MUM: MEDIUM by R4; incoming 115 shown as "Arrival +115" (4 Oct 2026, day 4) and
+  "No stockout projected within the lead time". SKU-031 @ WH-MUM: safety stock "25 override".
+- Stale state: `inventory_levels.committed_qty` for SKU-004 @ WH-MUM changed 19 -> 20 on the dev
+  DB (a one-row update through the app's SQLAlchemy session); sections 4–6 showed the stale notice
+  while the header, metrics and sales rendered; then restored 20 -> 19, after which the page was
+  fresh again. No recalculation was needed (the stored snapshot already matched the seed value),
+  so the dev DB ends exactly as it started.
+- Product detail load (warm dev server, in-app navigation from the risk list to all sections
+  loaded): 650, 491, 541, 521, 521 ms; median 521 ms.
+- Screenshots: `docs/evidence/p4-risk-list.png`, `p4-slow-moving.png`, `p4-products-search.png`,
+  `p4-product-sku004-mum.png`, `p4-product-sku024-mum.png`, `p4-product-stale.png`.
