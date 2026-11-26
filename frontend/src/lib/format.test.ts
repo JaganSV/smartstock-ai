@@ -7,6 +7,7 @@ import {
   formatMoney,
   formatNumber,
   formatPercentRatio,
+  formatShare,
   formatShortDate,
   sumMoney,
 } from './format';
@@ -143,5 +144,14 @@ describe('sumMoney (presentation sum, exact)', () => {
 
   it('rejects a non-decimal value', () => {
     expect(() => sumMoney(['1e5'])).toThrow(RangeError);
+  });
+});
+
+describe('formatShare', () => {
+  it('formats a ratio as a percentage', () => {
+    expect(formatShare(0.99)).toBe('99%');
+    expect(formatShare(0.975)).toBe('97.5%');
+    expect(formatShare(1)).toBe('100%');
+    expect(formatShare(null)).toBe('—');
   });
 });

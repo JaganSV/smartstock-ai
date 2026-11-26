@@ -106,6 +106,7 @@ export default function AppShell() {
                       <ListItemButton
                         component={NavLink}
                         to={item.path}
+                        end={item.path === '/risk'}
                         aria-label={label}
                         sx={{ '&.active': { bgcolor: 'action.selected', fontWeight: 600 } }}
                       >

@@ -72,6 +72,7 @@ export function useDashboardFilters(): DashboardFilterState {
             if (value === undefined) next.delete(name);
             else next.set(name, String(value));
           }
+          next.delete('page'); // a new filter starts at page 1 (list pages)
           return next;
         },
         { replace: true },

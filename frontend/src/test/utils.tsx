@@ -2,7 +2,7 @@
 import { ThemeProvider } from '@mui/material/styles';
 import { render, type RenderResult } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { vi } from 'vitest';
 
 import type { MeResponse } from '../api/types';
@@ -109,6 +109,43 @@ export function renderApp(path: string): RenderResult {
           <AppRoutes />
         </MemoryRouter>
       </AuthProvider>
+    </Providers>,
+  );
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{location.pathname + location.search}</output>;
+}
+
+/**
+ * One page at ``path`` (route pattern ``route``) with a fake signed-in user, the theme, the
+ * snackbar provider and fixed-width charts; ``screen.getByTestId('location')`` shows the URL.
+ */
+export function renderPage(
+  path: string,
+  route: string,
+  element: ReactElement,
+  role: 'ADMIN' | 'ANALYST' = 'ADMIN',
+): RenderResult {
+  return render(
+    <Providers>
+      <AuthContext.Provider value={fakeAuth(fakeSession(role))}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route
+              path={route}
+              element={
+                <>
+                  {element}
+                  <LocationProbe />
+                </>
+              }
+            />
+            <Route path="*" element={<LocationProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthContext.Provider>
     </Providers>,
   );
 }

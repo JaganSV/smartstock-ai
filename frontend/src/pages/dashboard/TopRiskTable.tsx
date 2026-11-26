@@ -1,5 +1,6 @@
-import Alert from '@mui/material/Alert';
+import Link from '@mui/material/Link';
 import Skeleton from '@mui/material/Skeleton';
+import { Link as RouterLink } from 'react-router';
 
 import { getStockoutRisk } from '../../api/endpoints';
 import type { DashboardFilters, StockoutRiskRow } from '../../api/types';
@@ -9,16 +10,32 @@ import RiskBadge from '../../components/RiskBadge';
 import VerifiedDataPanel from '../../components/VerifiedDataPanel';
 import { useApi } from '../../hooks/useApi';
 import { EMPTY, formatDays, formatNumber } from '../../lib/format';
-import RecalculateButton from './RecalculateButton';
 import { isNoSnapshot, isStale } from './snapshotErrors';
+import StaleNotice from './StaleNotice';
 
 export const TOP_N = 10;
-export const STALE_NOTICE = 'Data changed since the last snapshot. Figures may be out of date.';
+export { STALE_NOTICE } from './StaleNotice';
 export const CAPTION = 'Sorted by severity, then days of cover';
 
+/** SKU as a link to the product page, opened on the row's warehouse (P4-03). */
+export function SkuLink({
+  row,
+}: {
+  row: { product_id: number; warehouse_id: number; sku: string };
+}) {
+  return (
+    <Link
+      component={RouterLink}
+      to={`/products/${row.product_id}?warehouse_id=${row.warehouse_id}`}
+      underline="hover"
+    >
+      {row.sku}
+    </Link>
+  );
+}
+
 export const COLUMNS: Column<StockoutRiskRow>[] = [
-  // Plain text until P4-03 adds the product page.
-  { id: 'sku', header: 'SKU', render: (row) => row.sku, nowrap: true },
+  { id: 'sku', header: 'SKU', render: (row) => <SkuLink row={row} />, nowrap: true },
   { id: 'name', header: 'Product', render: (row) => row.name },
   { id: 'warehouse', header: 'Warehouse', render: (row) => row.warehouse_code, nowrap: true },
   { id: 'risk', header: 'Risk', render: (row) => <RiskBadge risk={row.risk_class} /> },
@@ -66,14 +83,7 @@ export default function TopRiskTable({ filters, ready, reloadSignal, onRecalcula
 
   let body;
   if (isStale(error)) {
-    body = (
-      <Alert
-        severity="warning"
-        action={<RecalculateButton onDone={onRecalculated} variant="text" />}
-      >
-        {STALE_NOTICE}
-      </Alert>
-    );
+    body = <StaleNotice onRecalculated={onRecalculated} />;
   } else if (error && !isNoSnapshot(error)) {
     body = <ErrorState error={error} title="Could not load the top 10" onRetry={reload} />;
   } else if ((loading || !data) && !error) {

@@ -411,6 +411,45 @@ Source: `starlette/testclient.py` (Starlette 1.10.0) tries `import httpx2` first
   recalculation succeeds and the page reloads, so their success snackbar is replaced by the
   reloaded dashboard (the header button keeps its snackbar).
 
+## P4-03 status (2026-11-26) – P4 complete
+
+- Carry-over F1 (accepted for dev): the first cold dashboard load on the Vite dev server was
+  2.3 s (median of five 0.95 s). P10 measures the production build (`vite build` +
+  `vite preview`) against the 2 s target. F2 (KPI tiles 3 x 2 at 1280 px; trend badge
+  "Verified · sales to <date>") accepted.
+- New lazy routes (capability `view_inventory`), all in the navigation: Risk > Stockout risk
+  (`/risk`), Risk > Slow-moving (`/risk/slow-moving`), Products (`/products`) and product detail
+  (`/products/:productId?warehouse_id=`). Filters, sort, search and page are URL query params on
+  every list; a filter change resets the page.
+- Stockout risk (FR-C1) and slow-moving lists: the API order is shown as returned (no client
+  sort), with captions stating it; SKUs link to product detail on the row's warehouse; stale
+  409 shows the stale notice with Recalculate for admins; no snapshot shows the empty state.
+- Catalogue: search (`q`, 300 ms debounce, 1–50 characters, clear button), category / supplier /
+  warehouse filters (unknown ids fall back to All with a notice), risk-class chips sent as
+  repeated `risk_class` params (the API client now serialises arrays as repeated keys), a
+  "Slow-moving only" switch and sortable SKU / name / risk / days-of-cover headers.
+- Product detail: header (supplier terms, money, roll-up class "driven by" its warehouse),
+  warehouse tabs with risk badges (default: valid `warehouse_id`, else the roll-up warehouse;
+  invalid id falls back with a notice), per-warehouse metrics, "Why this risk class" (the API's
+  rule trace, fired rule highlighted with its reason code and the BP 7.4 rule in plain words,
+  labelled "Deterministic rule evaluation — not AI"), lead-time projection (zero line, dashed
+  stockout marker "Projected stockout: Day N (<date>)", dotted arrival markers, solid "End of lead
+  time (L = N days)" line, a text legend repeating every marker, "No stockout projected within
+  the lead time" when null), "How each number is calculated" (collapsed by default; formula,
+  inputs and result exactly as `/explain` returns them) and sales (30/60/90 days, this warehouse
+  or all). A stale 409 on `/risk` or `/explain` turns sections 4–6 into the stale notice; the
+  header, metrics and sales still render. Unknown product -> NotFound. An empty, hidden
+  `<aside data-slot="ai-explanation">` is reserved for P6.
+- The dashboard top-10 SKUs now link to product detail with the row's `warehouse_id`.
+- Interpretations (none silent): `GET /products/{id}` rows carry neither demand sigma nor lead time
+  nor inventory position, so the metrics panel shows lead time from `/risk/{id}` and sigma and
+  inventory position from the verified `/explain` results ("—" while those load or when stale);
+  dead stock is only available per product (roll-up) on this page, so its chip is in the header,
+  not per warehouse; arrivals after the lead time are listed under the chart as "Later arrival"
+  (the projection ends at L); the sales chart code is shared with the dashboard trend
+  (`components/SalesSeriesChart.tsx`), so the product chart also shows the labelled
+  "Sum of the series shown".
+
 ## API change log
 
 Every change to `docs/api/openapi-v1.json` is listed here (newest first). Export with

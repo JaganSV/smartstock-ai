@@ -1,5 +1,8 @@
 import DashboardOutlined from '@mui/icons-material/DashboardOutlined';
+import HourglassBottomOutlined from '@mui/icons-material/HourglassBottomOutlined';
+import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
 import ReceiptLongOutlined from '@mui/icons-material/ReceiptLongOutlined';
+import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
 import type { SvgIconComponent } from '@mui/icons-material';
 
 import type { Capability } from '../auth/AuthContext';
@@ -24,6 +27,29 @@ export const NAV_ITEMS: readonly NavItem[] = [
     label: 'Dashboard',
     path: '/dashboard',
     icon: DashboardOutlined,
+    capability: 'view_inventory',
+    status: 'built',
+  },
+  {
+    label: 'Stockout risk',
+    path: '/risk',
+    icon: WarningAmberOutlined,
+    capability: 'view_inventory',
+    status: 'built',
+    section: 'Risk',
+  },
+  {
+    label: 'Slow-moving',
+    path: '/risk/slow-moving',
+    icon: HourglassBottomOutlined,
+    capability: 'view_inventory',
+    status: 'built',
+    section: 'Risk',
+  },
+  {
+    label: 'Products',
+    path: '/products',
+    icon: Inventory2Outlined,
     capability: 'view_inventory',
     status: 'built',
   },

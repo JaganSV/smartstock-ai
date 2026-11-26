@@ -149,6 +149,9 @@ export function responseErrorInterceptor(error: unknown): Promise<never> {
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 30_000,
+  // Arrays as repeated keys (``risk_class=A&risk_class=B``), the form FastAPI reads; Axios's
+  // default would send ``risk_class[]=A``.
+  paramsSerializer: { indexes: null },
 });
 
 apiClient.interceptors.request.use(requestInterceptor);

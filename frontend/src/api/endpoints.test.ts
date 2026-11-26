@@ -5,11 +5,18 @@ import {
   getAuditLog,
   getCategories,
   getDashboardSummary,
+  getExplanation,
   getHealth,
   getMe,
+  getProductDetail,
+  getProducts,
+  getProductSales,
+  getRiskDetail,
   getRiskDistribution,
   getSalesTrend,
+  getSlowMoving,
   getStockoutRisk,
+  getSuppliers,
   getWarehouses,
   login,
   recalculate,
@@ -81,5 +88,32 @@ describe('endpoints', () => {
     });
     await recalculate();
     expect(post).toHaveBeenLastCalledWith('/analytics/recalculate');
+  });
+
+  it('calls the product, risk-detail, explain, slow-moving and supplier endpoints', async () => {
+    const signal = new AbortController().signal;
+    await getSuppliers(signal);
+    expect(get).toHaveBeenLastCalledWith('/reference/suppliers', { signal });
+    await getProducts({ q: 'sku', risk_class: ['HIGH'], supplier_id: undefined, page: 1 }, signal);
+    expect(get).toHaveBeenLastCalledWith('/products', {
+      params: { q: 'sku', risk_class: ['HIGH'], page: 1 },
+      signal,
+    });
+    await getProductDetail(154, signal);
+    expect(get).toHaveBeenLastCalledWith('/products/154', { signal });
+    await getProductSales(154, { days: 30, warehouse_id: undefined }, signal);
+    expect(get).toHaveBeenLastCalledWith('/products/154/sales', { params: { days: 30 }, signal });
+    await getRiskDetail(154, 10, signal);
+    expect(get).toHaveBeenLastCalledWith('/risk/154', { params: { warehouse_id: 10 }, signal });
+    await getExplanation(154, 10, signal);
+    expect(get).toHaveBeenLastCalledWith('/analytics/metrics/154/explain', {
+      params: { warehouse_id: 10 },
+      signal,
+    });
+    await getSlowMoving({ page: 2, page_size: 50 }, signal);
+    expect(get).toHaveBeenLastCalledWith('/risk/slow-moving', {
+      params: { page: 2, page_size: 50 },
+      signal,
+    });
   });
 });

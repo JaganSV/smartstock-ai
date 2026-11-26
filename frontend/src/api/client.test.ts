@@ -220,3 +220,13 @@ describe('response error interceptor', () => {
     expect(requestInterceptor(config()).headers.has('Authorization')).toBe(false);
   });
 });
+
+describe('query serialisation', () => {
+  it('sends arrays as repeated keys, the form FastAPI reads', () => {
+    const uri = apiClient.getUri({
+      url: '/products',
+      params: { risk_class: ['STOCKOUT', 'CRITICAL'], page: 1 },
+    });
+    expect(uri).toContain('/products?risk_class=STOCKOUT&risk_class=CRITICAL&page=1');
+  });
+});

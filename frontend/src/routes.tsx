@@ -11,6 +11,10 @@ import Login from './pages/Login';
 // The shell and the login page stay in the main chunk so sign-in needs no extra request.
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const AuditLog = lazy(() => import('./pages/admin/AuditLog'));
+const StockoutRisk = lazy(() => import('./pages/risk/StockoutRisk'));
+const SlowMoving = lazy(() => import('./pages/risk/SlowMoving'));
+const ProductList = lazy(() => import('./pages/products/ProductList'));
+const ProductDetail = lazy(() => import('./pages/products/ProductDetail'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 function Page({ children }: { children: ReactNode }) {
@@ -40,6 +44,26 @@ export default function AppRoutes() {
             </RequireCapability>
           }
         />
+        {(
+          [
+            ['risk', StockoutRisk],
+            ['risk/slow-moving', SlowMoving],
+            ['products', ProductList],
+            ['products/:productId', ProductDetail],
+          ] as const
+        ).map(([path, Component]) => (
+          <Route
+            key={path}
+            path={path}
+            element={
+              <RequireCapability cap="view_inventory">
+                <Page>
+                  <Component />
+                </Page>
+              </RequireCapability>
+            }
+          />
+        ))}
         <Route
           path="admin/audit-log"
           element={

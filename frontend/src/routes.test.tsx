@@ -130,7 +130,13 @@ describe('navigation', () => {
   it('lists only built entries the user may see', () => {
     const planned: NavItem = { ...NAV_ITEMS[0], label: 'Risk', path: '/risk', status: 'planned' };
     const items = visibleNavItems(() => true, [...NAV_ITEMS, planned]);
-    expect(items.map((item) => item.label)).toEqual(['Dashboard', 'Audit log']);
+    expect(items.map((item) => item.label)).toEqual([
+      'Dashboard',
+      'Stockout risk',
+      'Slow-moving',
+      'Products',
+      'Audit log',
+    ]);
     expect(visibleNavItems(() => false)).toEqual([]);
   });
 

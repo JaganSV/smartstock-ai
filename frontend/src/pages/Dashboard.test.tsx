@@ -330,7 +330,11 @@ describe('top 10 at risk (FR-A3)', () => {
     expect(within(rows[9]).getByText('—')).toBeInTheDocument();
     expect(within(table).getByText(CAPTION)).toBeInTheDocument();
     expect(within(table).queryByRole('button', { name: /next page/i })).not.toBeInTheDocument();
-    expect(within(table).queryByRole('link')).not.toBeInTheDocument();
+    // P4-03: the SKU opens the product page on the row's warehouse.
+    expect(within(rows[0]).getByRole('link', { name: 'SKU-001' })).toHaveAttribute(
+      'href',
+      '/products/151?warehouse_id=10',
+    );
   });
 });
 

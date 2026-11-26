@@ -39,3 +39,19 @@ export interface DashboardFilters {
   warehouse_id?: number;
   category_id?: number;
 }
+
+export type ProductPage = Schemas['ProductPage'];
+export type ProductSummary = Schemas['ProductSummaryOut'];
+export type ProductDetail = Schemas['ProductDetailOut'];
+export type WarehouseMetric = Schemas['WarehouseMetricOut'];
+export type ProductSales = Schemas['ProductSalesOut'];
+export type RiskDetail = Schemas['RiskDetailOut'];
+export type Projection = Schemas['ProjectionOut'];
+export type Explanation = Schemas['ExplainOut'];
+export type ExplainItem = Schemas['ExplainItem'];
+export type SlowMovingPage = Schemas['SlowMovingPage'];
+export type SlowMovingRow = Schemas['SlowMovingOut'];
+export type Supplier = Schemas['SupplierOut'];
+export type ProductQuery = NonNullable<
+  operations['list_products_api_v1_products_get']['parameters']['query']
+>;

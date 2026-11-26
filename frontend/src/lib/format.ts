@@ -153,3 +153,11 @@ export function sumMoney(values: readonly string[]): string {
   const cents = (abs % 100n).toString().padStart(2, '0');
   return `${negative ? '-' : ''}${abs / 100n}.${cents}`;
 }
+
+/** A ratio as an unsigned percentage: 0.99 -> "99%", 0.975 -> "97.5%". Null gives "—". */
+export function formatShare(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return EMPTY;
+  return new Intl.NumberFormat('en-IN', { style: 'percent', maximumFractionDigits: 1 }).format(
+    value,
+  );
+}
