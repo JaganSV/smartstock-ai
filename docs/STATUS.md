@@ -478,3 +478,48 @@ server total, expands a row to JSON and loads page 2; a refresh returns to `/log
 no Audit log menu item; typing `/admin/audit-log` as analyst shows the 403 page.
 Screenshots: `docs/evidence/p4-login.png`, `p4-shell-admin.png`, `p4-audit-log.png`,
 `p4-forbidden-analyst.png`.
+
+### P4-02 final gates (2026-11-26, clean tree at 2ba24f9)
+
+| Gate | Result |
+| --- | --- |
+| `git status --short` | empty |
+| `npm audit` | found 0 vulnerabilities |
+| `npm run build` | no chunk warning; largest `Dashboard` 432.15 kB (gzip 115.86 kB), `TextField` 283.44 kB, `index` 131.66 kB (before E2: one 553.66 kB chunk with the warning) |
+| `make lint` | ruff: All checks passed, 148 files already formatted; eslint clean; Secret scan passed |
+| `make typecheck` | mypy: no issues found in 92 source files; tsc clean |
+| `make test` | backend 848 passed, 1 warning (C4), TOTAL 99%; frontend 14 files, 178 tests passed; exit 0 |
+| `npx vitest run --coverage` | lines 98.36% (601/611), statements 97.82%, branches 94.82%, functions 95.37% (threshold 80%) |
+| `make openapi && git status --short` | no change (E1 is CORS only) |
+
+| Package | Statements | Missed | Covered % |
+| --- | --- | --- | --- |
+| app/analytics | 467 | 2 | 99.57 |
+| app/services | 792 | 13 | 98.36 |
+| app/repositories | 268 | 2 | 99.25 |
+| app/api | 265 | 0 | 100.00 |
+| app/core | 244 | 0 | 100.00 |
+| data/seed | 607 | 4 | 99.34 |
+
+Browser checks (headless Edge driven over the DevTools protocol, committed code; port 8000 was
+still held by the stale 18 Nov server, so the backend ran on 8001 and Vite on 5173 with
+`VITE_API_BASE_URL` overridden for that process only, as BOB-P4-02 section 16 allows): 23/23 passed.
+
+- Admin, unfiltered: tiles 50 / 73,484 / ₹8,99,44,367.37 / 7 / 15 / 11; distribution (Locations)
+  3/8/4/3/11/121; top 10 starts SKU-001/002/003 STOCKOUT, 10 rows; four Verified badges; snapshot
+  line "Verified · calculated 26 Nov 2026, 19:52 IST · data as of 30 Sept 2026"; no horizontal
+  scroll at 1280 px or 960 px.
+- WH-MUM: URL `?warehouse_id=10`; tiles 50 / 25,741 / ₹2,89,42,359.19 / 3 / 8 / 3; after a reload
+  and sign-in the same URL and values return.
+- Trend 30/60/90 refetches (30 / 60 / 90 rows; sums change); Products mode sums to 50 products.
+- Recalculate: "Snapshot 16 created (150 rows, 575 ms)"; analyst has no Recalculate button.
+- Empty state: shown by intercepting `GET /dashboard/summary` in the browser (DevTools Fetch domain)
+  and answering the API's no-snapshot 409; no database was changed. Admin sees "Run first
+  calculation"; analyst sees "Ask an administrator to run a calculation."
+- Lockout: six failed sign-ins for a non-existent username (no real account locked) show
+  "Too many failed attempts. Try again in 15 minutes." (`Retry-After` now readable, E1).
+- Load time, sign-in click to all four sections loaded: 2316, 849, 839, 952, 1026 ms; median
+  952 ms. The first sample is the first visit, when the dev server serves the lazy dashboard
+  modules cold.
+- Screenshots: `docs/evidence/p4-dashboard-admin.png`, `p4-dashboard-filtered-wh-mum.png`,
+  `p4-dashboard-analyst.png`, `p4-dashboard-empty-state.png`, `p4-lockout-minutes.png`.
