@@ -33,9 +33,9 @@ describe('route guards', () => {
     expect(screen.getByText(SIGN_IN_AGAIN)).toBeInTheDocument();
   });
 
-  it('/ redirects to the dashboard', () => {
+  it('/ redirects to the dashboard', async () => {
     renderRoutes('/', fakeAuth(fakeSession('ANALYST')));
-    expect(screen.getByText('Dashboard – coming in P4-02')).toBeInTheDocument();
+    expect(await screen.findByText('Dashboard – coming in P4-02')).toBeInTheDocument();
   });
 
   it('RequireCapability shows the 403 page to an analyst on the audit log', () => {
@@ -49,14 +49,14 @@ describe('route guards', () => {
     expect(screen.getByRole('heading', { name: '403 – Access denied' })).toBeInTheDocument();
   });
 
-  it('an unknown path shows the 404 page', () => {
+  it('an unknown path shows the 404 page', async () => {
     renderRoutes('/no/such/page', fakeAuth(fakeSession('ADMIN')));
-    expect(screen.getByRole('heading', { name: '404 – Page not found' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '404 – Page not found' })).toBeInTheDocument();
   });
 
-  it('a signed-in user visiting /login goes to the dashboard', () => {
+  it('a signed-in user visiting /login goes to the dashboard', async () => {
     renderRoutes('/login', fakeAuth(fakeSession('ADMIN')));
-    expect(screen.getByText('Dashboard – coming in P4-02')).toBeInTheDocument();
+    expect(await screen.findByText('Dashboard – coming in P4-02')).toBeInTheDocument();
   });
 });
 

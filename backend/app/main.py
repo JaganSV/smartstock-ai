@@ -41,7 +41,8 @@ def create_app(session_factory: sessionmaker[Session] | None = None) -> FastAPI:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", REQUEST_ID_HEADER],
-        expose_headers=[REQUEST_ID_HEADER],
+        # Retry-After lets the browser show the lockout minutes on a 429 (BOB-P4-02 E1).
+        expose_headers=[REQUEST_ID_HEADER, "Retry-After"],
     )
     # Size limit sits inside the request-ID layer so its 413 carries the request ID (BP 10.3).
     app.add_middleware(

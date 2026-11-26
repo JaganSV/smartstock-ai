@@ -127,3 +127,13 @@ def test_cors_allows_only_configured_origin(client: TestClient) -> None:
     assert allowed.headers["access-control-allow-origin"] == "http://localhost:5173"
     denied = client.get("/api/v1/health", headers={"Origin": "http://evil.example"})
     assert "access-control-allow-origin" not in denied.headers
+
+
+def test_cors_exposes_request_id_and_retry_after(client: TestClient) -> None:
+    """BOB-P4-02 E1: the browser can read Retry-After (lockout minutes) and X-Request-ID."""
+    response = client.get("/api/v1/health", headers={"Origin": "http://localhost:5173"})
+    exposed = {
+        name.strip().lower()
+        for name in response.headers["access-control-expose-headers"].split(",")
+    }
+    assert {"x-request-id", "retry-after"} <= exposed
