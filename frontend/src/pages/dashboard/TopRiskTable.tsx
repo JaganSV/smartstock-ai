@@ -54,6 +54,7 @@ export const COLUMNS: Column<StockoutRiskRow>[] = [
   {
     id: 'stockout',
     header: 'Projected stockout',
+    nowrap: true,
     render: (row) =>
       row.projected_stockout_day === null ? EMPTY : `Day ${row.projected_stockout_day}`,
     align: 'right',

@@ -61,9 +61,9 @@ describe('formatNumber', () => {
 
 describe('formatDays', () => {
   it('shows one decimal and "days"', () => {
-    expect(formatDays(5.6643)).toBe('5.7 days');
-    expect(formatDays(0)).toBe('0.0 days');
-    expect(formatDays(1234.56)).toBe('1,234.6 days');
+    expect(formatDays(5.6643)).toBe('5.7\u00a0days');
+    expect(formatDays(0)).toBe('0.0\u00a0days');
+    expect(formatDays(1234.56)).toBe('1,234.6\u00a0days');
   });
 
   it('shows "No recent demand" for null', () => {

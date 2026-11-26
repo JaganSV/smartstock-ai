@@ -1,14 +1,17 @@
 import { fireEvent, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as endpoints from './api/endpoints';
 import { SIGN_IN_AGAIN } from './auth/AuthContext';
 import { NAV_ITEMS, visibleNavItems, type NavItem } from './layout/navConfig';
 import { roleLabel } from './layout/AppShell';
 import { mockDashboardApi } from './test/dashboardFixtures';
-import { fakeAuth, fakeSession, renderRoutes } from './test/utils';
+import { fakeAuth, fakeSession, preloadPages, renderRoutes } from './test/utils';
 
 vi.mock('./api/endpoints');
+
+// Warm the lazily loaded pages so a cold module graph never eats the findBy window.
+beforeAll(() => preloadPages(), 60_000);
 
 beforeEach(() => {
   mockDashboardApi(endpoints);

@@ -149,3 +149,20 @@ export function renderPage(
     </Providers>,
   );
 }
+
+/**
+ * Imports every lazily routed page once, so tests that render the route tree do not spend their
+ * ``findBy`` window compiling a cold module graph (React.lazy then resolves from the cache).
+ * Call from ``beforeAll`` with a generous timeout.
+ */
+export async function preloadPages(): Promise<void> {
+  await Promise.all([
+    import('../pages/Dashboard'),
+    import('../pages/admin/AuditLog'),
+    import('../pages/risk/StockoutRisk'),
+    import('../pages/risk/SlowMoving'),
+    import('../pages/products/ProductList'),
+    import('../pages/products/ProductDetail'),
+    import('../pages/NotFound'),
+  ]);
+}

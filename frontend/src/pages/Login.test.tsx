@@ -1,13 +1,16 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError, SERVICE_UNAVAILABLE } from '../api/client';
 import * as endpoints from '../api/endpoints';
 import { mockDashboardApi } from '../test/dashboardFixtures';
-import { me, renderApp } from '../test/utils';
+import { me, preloadPages, renderApp } from '../test/utils';
 import { INVALID_CREDENTIALS, TOO_MANY_ATTEMPTS_LATER, tooManyAttempts } from './Login';
 
 vi.mock('../api/endpoints');
+
+// Warm the lazily loaded pages so a cold module graph never eats the findBy window.
+beforeAll(() => preloadPages(), 60_000);
 
 const login = vi.mocked(endpoints.login);
 const getMe = vi.mocked(endpoints.getMe);

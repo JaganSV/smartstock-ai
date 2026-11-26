@@ -71,7 +71,7 @@ export const COLUMNS: Column<ProductSummary>[] = [
     header: 'Risk',
     sortKey: 'risk',
     render: (row) => (
-      <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+      <Stack spacing={0.25} sx={{ alignItems: 'flex-start' }}>
         <RiskBadge risk={row.risk_class} />
         <Typography variant="caption" color="text.secondary" noWrap>
           {row.risk_warehouse_code}

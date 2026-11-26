@@ -127,7 +127,7 @@ describe('metrics (FR-C2)', () => {
     expect(value('ADS 30')).toBe('ADS 3021.5333');
     expect(value('Safety stock')).toBe('Safety stock47');
     expect(value('Reorder point')).toBe('Reorder point349');
-    expect(value('Days of cover')).toBe('Days of cover10.4 days');
+    expect(value('Days of cover')).toBe('Days of cover10.4\u00a0days');
     expect(value('Reorder quantity')).toBe('Reorder quantity432');
     expect(value('Service level')).toBe('Service level99%');
     await waitFor(() => expect(value('Lead time')).toBe('Lead time14 days'));

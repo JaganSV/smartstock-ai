@@ -67,10 +67,11 @@ export function formatNumber(
   }).format(value);
 }
 
-/** Days of cover: one decimal and "days"; null (no recent demand, BP 7.2) gives that text. */
+/** Days of cover: one decimal and "days" (joined by a no-break space); null gives "No recent demand". */
 export function formatDays(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return NO_RECENT_DEMAND;
-  return `${formatNumber(value, 1, 1)} days`;
+  // A non-breaking space keeps "10.4 days" on one line in narrow table cells.
+  return `${formatNumber(value, 1, 1)}\u00a0days`;
 }
 
 /** A ratio as a signed percentage: 0.25 -> "+25.0%", -0.125 -> "-12.5%", 0 -> "0.0%". */

@@ -1,10 +1,10 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '../../api/client';
 import * as endpoints from '../../api/endpoints';
 import type { AuditLogItem } from '../../api/types';
-import { fakeAuth, fakeSession, renderRoutes } from '../../test/utils';
+import { fakeAuth, fakeSession, preloadPages, renderRoutes } from '../../test/utils';
 import { toQuery } from './AuditLog';
 
 vi.mock('../../api/endpoints', () => ({
@@ -13,6 +13,9 @@ vi.mock('../../api/endpoints', () => ({
   getHealth: vi.fn().mockResolvedValue({ status: 'ok' }),
   getAuditLog: vi.fn(),
 }));
+
+// Warm the lazily loaded pages so a cold module graph never eats the findBy window.
+beforeAll(() => preloadPages(), 60_000);
 
 const getAuditLog = vi.mocked(endpoints.getAuditLog);
 
