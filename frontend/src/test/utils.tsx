@@ -14,6 +14,7 @@ import {
 } from '../auth/AuthContext';
 import AuthProvider from '../auth/AuthProvider';
 import ApiErrorSnackbarProvider from '../components/ApiErrorSnackbar';
+import { ChartWidthContext } from '../components/ChartFrame';
 import AppRoutes from '../routes';
 import { theme } from '../theme/theme';
 
@@ -69,7 +70,10 @@ export function fakeAuth(session: Session | null, overrides: Partial<AuthContext
 function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider theme={theme}>
-      <ApiErrorSnackbarProvider>{children}</ApiErrorSnackbarProvider>
+      <ApiErrorSnackbarProvider>
+        {/* jsdom cannot measure layout: charts render at a fixed width in tests. */}
+        <ChartWidthContext.Provider value={640}>{children}</ChartWidthContext.Provider>
+      </ApiErrorSnackbarProvider>
     </ThemeProvider>
   );
 }

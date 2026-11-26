@@ -1,17 +1,13 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError, SERVICE_UNAVAILABLE } from '../api/client';
 import * as endpoints from '../api/endpoints';
+import { mockDashboardApi } from '../test/dashboardFixtures';
 import { me, renderApp } from '../test/utils';
 import { INVALID_CREDENTIALS, TOO_MANY_ATTEMPTS_LATER, tooManyAttempts } from './Login';
 
-vi.mock('../api/endpoints', () => ({
-  login: vi.fn(),
-  getMe: vi.fn(),
-  getHealth: vi.fn().mockResolvedValue({ status: 'ok' }),
-  getAuditLog: vi.fn().mockResolvedValue({ items: [], page: 1, page_size: 25, total: 0 }),
-}));
+vi.mock('../api/endpoints');
 
 const login = vi.mocked(endpoints.login);
 const getMe = vi.mocked(endpoints.getMe);
@@ -34,6 +30,13 @@ const ok = {
 
 describe('Login page', () => {
   beforeEach(() => {
+    mockDashboardApi(endpoints);
+    vi.mocked(endpoints.getAuditLog).mockResolvedValue({
+      items: [],
+      page: 1,
+      page_size: 25,
+      total: 0,
+    });
     login.mockReset();
     getMe.mockReset().mockResolvedValue(me('ADMIN'));
   });
@@ -43,7 +46,9 @@ describe('Login page', () => {
     renderApp('/login');
     fill();
     submit();
-    expect(await screen.findByText('Dashboard – coming in P4-02')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Inventory Dashboard' }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(screen.getByTestId('user-name')).toHaveTextContent('admin');
     expect(screen.getByTestId('user-role')).toHaveTextContent('Admin');
   });
@@ -137,9 +142,9 @@ describe('Login page', () => {
     submit();
     expect(await screen.findByRole('button', { name: 'Signing in…' })).toBeDisabled();
     resolve(ok);
-    await waitFor(() =>
-      expect(screen.getByText('Dashboard – coming in P4-02')).toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole('heading', { name: 'Inventory Dashboard' }, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 
   it('shows and hides the password', () => {

@@ -374,6 +374,43 @@ Source: `starlette/testclient.py` (Starlette 1.10.0) tries `import httpx2` first
   minutes. Exposing `Retry-After` is a one-line CORS change that needs an architect decision
   (BOB-P4-01 kept CORS unchanged).
 
+## P4-02 status (2026-11-26)
+
+- E1: the backend CORS setup exposes `Retry-After` next to `X-Request-ID`
+  (`backend/app/main.py`; test `test_cors_exposes_request_id_and_retry_after`), so the login page
+  shows the lockout minutes in the browser. CORS config only: `make openapi` shows no diff.
+- E2: route-level code splitting (`React.lazy` + `Suspense` with a skeleton fallback) for the
+  Dashboard, Admin > Audit log and NotFound pages; the shell and the login page stay in the main
+  chunk. `npm run build` before: one chunk `index` 553.66 kB (gzip 177.30 kB) with the
+  "chunks are larger than 500 kB" warning. After E2 alone: largest chunk 437.81 kB, no warning.
+  With the dashboard (Recharts lives in the Dashboard chunk): largest chunk `Dashboard`
+  431.97 kB (gzip 115.80 kB), main `index` 131.66 kB, no warning. No build-config change.
+- Dashboard (`frontend/src/pages/Dashboard.tsx`, `src/pages/dashboard/`): every number comes from
+  the API in a verified panel. Header snapshot line "Verified · calculated <time zone> · data as
+  of <date>"; six KPI tiles with BP 7.4 definitions as tooltips; 30/60/90-day units trend with a
+  labelled "Sum of the series shown" (units, and revenue summed exactly in paise, no floats) and a
+  screen-reader table; risk distribution (Locations = rows, Products = rolled-up) with theme risk
+  colours and a "CLASS: count" label on every bar; top 10 from `/risk/stockout?page_size=10`;
+  filters in `?warehouse_id=&category_id=` (validated against `/reference/*`; an invalid id falls
+  back to All with a notice; the sections wait for validation, so no request uses an unchecked id).
+- Recalculate (`recalculate_analytics` only): confirm dialog, `POST /analytics/recalculate`,
+  snackbar "Snapshot <id> created (N rows, <ms> ms)", every section reloads; 409 lock shows
+  "A recalculation is already running."; disabled while running; other errors use the error
+  snackbar (a 403 is left to the P4-01 interceptor).
+- States: a 409 without `details.fields` from summary or distribution is "no snapshot" (page-level
+  empty state; admin "Run first calculation", others "Ask an administrator to run a
+  calculation."); a 409 with `details.fields` from `/risk/stockout` is "stale" (section notice, admin
+  Recalculate action); any other error is an inline `ErrorState` with the reference and Retry.
+- `src/hooks/useApi.ts`: `{data, error, loading, reload}`, `AbortController` per request (aborted
+  on new parameters, reload and unmount); no new dependency.
+- Interpretations (none silent): the KPI tiles sit 3 x 2 at 1280 px (six across from 1536 px),
+  because six tiles at 1280 px leave about 116 px for "₹8,99,44,367.37"; the sales trend is not
+  snapshot-derived, so its badge reads "Verified · sales to <end date>" instead of a calculated
+  time; the trend axis labels are "Date" and "Units sold"; `RISK_CLASSES` order fixed to the
+  backend order (D-P4-004); the "Run first calculation" and stale-notice buttons unmount once the
+  recalculation succeeds and the page reloads, so their success snackbar is replaced by the
+  reloaded dashboard (the header button keeps its snackbar).
+
 ## API change log
 
 Every change to `docs/api/openapi-v1.json` is listed here (newest first). Export with

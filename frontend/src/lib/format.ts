@@ -123,3 +123,33 @@ export function formatDateTime(
     ...(timeZone ? { timeZone } : {}),
   }).format(date);
 }
+
+/** "2026-09-30" -> "30 Sept" (axis ticks). The date is shown as that calendar day everywhere. */
+export function formatShortDate(iso: string | null | undefined, locale?: string): string {
+  if (!iso || !DATE_ONLY_RE.test(iso)) return EMPTY;
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  }).format(new Date(`${iso}T00:00:00Z`));
+}
+
+/**
+ * Presentation-only sum of 2-dp decimal strings ("12.50" + "0.75" -> "13.25"), exact: it adds
+ * integer paise as BigInt, never floats. Used for the labelled "Sum of the series shown" line.
+ * Throws on a value that is not a plain decimal (the API never sends one).
+ */
+export function sumMoney(values: readonly string[]): string {
+  let total = 0n;
+  for (const value of values) {
+    const match = DECIMAL_RE.exec(value.trim());
+    if (!match) throw new RangeError(`not a decimal amount: ${value}`);
+    const [, sign, whole, frac = ''] = match;
+    const paise = BigInt(whole) * 100n + BigInt(frac.padEnd(2, '0').slice(0, 2));
+    total += sign === '-' ? -paise : paise;
+  }
+  const negative = total < 0n;
+  const abs = negative ? -total : total;
+  const cents = (abs % 100n).toString().padStart(2, '0');
+  return `${negative ? '-' : ''}${abs / 100n}.${cents}`;
+}

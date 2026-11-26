@@ -7,6 +7,8 @@ import {
   formatMoney,
   formatNumber,
   formatPercentRatio,
+  formatShortDate,
+  sumMoney,
 } from './format';
 
 describe('formatMoney', () => {
@@ -110,5 +112,36 @@ describe('formatDateTime', () => {
   it('gives a dash for missing or bad input', () => {
     expect(formatDateTime(undefined)).toBe('—');
     expect(formatDateTime('nope')).toBe('—');
+  });
+});
+
+describe('formatShortDate', () => {
+  it('shows day and month for a date-only value', () => {
+    expect(formatShortDate('2026-09-30', 'en-IN')).toBe('30 Sept');
+    expect(formatShortDate('2026-01-05', 'en-US')).toBe('Jan 5');
+  });
+
+  it('gives a dash for anything else', () => {
+    expect(formatShortDate('2026-09-30T00:00:00Z')).toBe('—');
+    expect(formatShortDate(null)).toBe('—');
+  });
+});
+
+describe('sumMoney (presentation sum, exact)', () => {
+  it('adds 2-dp strings without float error', () => {
+    expect(sumMoney(['0.10', '0.20'])).toBe('0.30');
+    expect(sumMoney(['100.10', '200.20', '0.05'])).toBe('300.35');
+    expect(sumMoney(['89944367.37', '0.63'])).toBe('89944368.00');
+    expect(sumMoney(['5', '1.5'])).toBe('6.50');
+    expect(sumMoney([])).toBe('0.00');
+  });
+
+  it('handles negatives', () => {
+    expect(sumMoney(['-1.25', '0.50'])).toBe('-0.75');
+    expect(sumMoney(['-0.05'])).toBe('-0.05');
+  });
+
+  it('rejects a non-decimal value', () => {
+    expect(() => sumMoney(['1e5'])).toThrow(RangeError);
   });
 });

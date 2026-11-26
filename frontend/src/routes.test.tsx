@@ -5,14 +5,20 @@ import * as endpoints from './api/endpoints';
 import { SIGN_IN_AGAIN } from './auth/AuthContext';
 import { NAV_ITEMS, visibleNavItems, type NavItem } from './layout/navConfig';
 import { roleLabel } from './layout/AppShell';
+import { mockDashboardApi } from './test/dashboardFixtures';
 import { fakeAuth, fakeSession, renderRoutes } from './test/utils';
 
-vi.mock('./api/endpoints', () => ({
-  login: vi.fn(),
-  getMe: vi.fn(),
-  getHealth: vi.fn(),
-  getAuditLog: vi.fn().mockResolvedValue({ items: [], page: 1, page_size: 25, total: 0 }),
-}));
+vi.mock('./api/endpoints');
+
+beforeEach(() => {
+  mockDashboardApi(endpoints);
+  vi.mocked(endpoints.getAuditLog).mockResolvedValue({
+    items: [],
+    page: 1,
+    page_size: 25,
+    total: 0,
+  });
+});
 
 const getHealth = vi.mocked(endpoints.getHealth);
 
@@ -35,7 +41,9 @@ describe('route guards', () => {
 
   it('/ redirects to the dashboard', async () => {
     renderRoutes('/', fakeAuth(fakeSession('ANALYST')));
-    expect(await screen.findByText('Dashboard – coming in P4-02')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Inventory Dashboard' }, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 
   it('RequireCapability shows the 403 page to an analyst on the audit log', () => {
@@ -51,12 +59,16 @@ describe('route guards', () => {
 
   it('an unknown path shows the 404 page', async () => {
     renderRoutes('/no/such/page', fakeAuth(fakeSession('ADMIN')));
-    expect(await screen.findByRole('heading', { name: '404 – Page not found' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: '404 – Page not found' }),
+    ).toBeInTheDocument();
   });
 
   it('a signed-in user visiting /login goes to the dashboard', async () => {
     renderRoutes('/login', fakeAuth(fakeSession('ADMIN')));
-    expect(await screen.findByText('Dashboard – coming in P4-02')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Inventory Dashboard' }, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -115,7 +127,7 @@ describe('navigation', () => {
     expect(await screen.findByText('Backend: unavailable')).toBeInTheDocument();
   });
 
-  it('lists only live entries the user may see', () => {
+  it('lists only built entries the user may see', () => {
     const planned: NavItem = { ...NAV_ITEMS[0], label: 'Risk', path: '/risk', status: 'planned' };
     const items = visibleNavItems(() => true, [...NAV_ITEMS, planned]);
     expect(items.map((item) => item.label)).toEqual(['Dashboard', 'Audit log']);

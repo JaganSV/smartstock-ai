@@ -41,6 +41,31 @@ describe('VerifiedDataPanel', () => {
   });
 });
 
+describe('VerifiedDataPanel variants', () => {
+  it('shows no badge without a snapshot, and a custom Verified label when given', () => {
+    const { rerender } = renderWithTheme(
+      <VerifiedDataPanel title="Loading panel" snapshot={null}>
+        <span>x</span>
+      </VerifiedDataPanel>,
+    );
+    expect(screen.queryByTestId('verified-badge')).not.toBeInTheDocument();
+    rerender(
+      <VerifiedDataPanel
+        title="Sales"
+        snapshot={null}
+        badgeLabel="Verified · sales to 30 Sept 2026"
+        actions={<button>30d</button>}
+      >
+        <span>x</span>
+      </VerifiedDataPanel>,
+    );
+    expect(screen.getByTestId('verified-badge')).toHaveTextContent(
+      'Verified · sales to 30 Sept 2026',
+    );
+    expect(screen.getByRole('button', { name: '30d' })).toBeInTheDocument();
+  });
+});
+
 describe('AiNarrativePanel', () => {
   const statuses: AiStatus[] = ['OK', 'UNAVAILABLE', 'BLOCKED', 'LOADING'];
 

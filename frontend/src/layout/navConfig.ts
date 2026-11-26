@@ -5,7 +5,7 @@ import type { SvgIconComponent } from '@mui/icons-material';
 import type { Capability } from '../auth/AuthContext';
 
 /**
- * Navigation as data. Later prompts add a page by adding an entry here. Only ``live`` entries are
+ * Navigation as data. Later prompts add a page by adding an entry here. Only ``built`` entries are
  * shown, and only to users whose ``capabilities`` (from ``GET /auth/me``) include ``capability``.
  * Modules not built yet are not listed at all.
  */
@@ -14,7 +14,7 @@ export interface NavItem {
   path: string;
   icon: SvgIconComponent;
   capability: Capability;
-  status: 'live' | 'planned';
+  status: 'built' | 'planned';
   /** Optional group heading, e.g. "Admin". */
   section?: string;
 }
@@ -25,22 +25,22 @@ export const NAV_ITEMS: readonly NavItem[] = [
     path: '/dashboard',
     icon: DashboardOutlined,
     capability: 'view_inventory',
-    status: 'live',
+    status: 'built',
   },
   {
     label: 'Audit log',
     path: '/admin/audit-log',
     icon: ReceiptLongOutlined,
     capability: 'view_governance',
-    status: 'live',
+    status: 'built',
     section: 'Admin',
   },
 ];
 
-/** The entries a user may see: live and allowed by their capabilities. */
+/** The entries a user may see: built and allowed by their capabilities. */
 export function visibleNavItems(
   can: (capability: Capability) => boolean,
   items: readonly NavItem[] = NAV_ITEMS,
 ): NavItem[] {
-  return items.filter((item) => item.status === 'live' && can(item.capability));
+  return items.filter((item) => item.status === 'built' && can(item.capability));
 }

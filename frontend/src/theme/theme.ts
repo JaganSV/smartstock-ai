@@ -17,7 +17,8 @@ export const aiGenerated = {
   text: '#2a1a5e',
 } as const;
 
-export const RISK_CLASSES = ['STOCKOUT', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'OVERSTOCK'] as const;
+/** Most severe first, in the BP 7.4 rule order R1-R6 (the backend's ``RiskClass`` order). */
+export const RISK_CLASSES = ['STOCKOUT', 'CRITICAL', 'HIGH', 'MEDIUM', 'OVERSTOCK', 'LOW'] as const;
 export type RiskClass = (typeof RISK_CLASSES)[number];
 
 /**

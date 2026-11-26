@@ -52,6 +52,8 @@ interface Props<T> {
   /** When given, each row gets an expand button that shows this below it. */
   renderExpanded?: (row: T) => ReactNode;
   caption?: string;
+  /** A fixed list (e.g. a top 10): no pagination controls. */
+  hidePagination?: boolean;
 }
 
 /**
@@ -76,6 +78,7 @@ export default function DataTable<T>({
   emptyMessage = 'No rows to show.',
   renderExpanded,
   caption,
+  hidePagination = false,
 }: Props<T>) {
   const [expanded, setExpanded] = useState<Set<string | number>>(new Set());
   const columnCount = columns.length + (renderExpanded ? 1 : 0);
@@ -190,15 +193,17 @@ export default function DataTable<T>({
           <TableBody>{body}</TableBody>
         </Table>
       </TableContainer>
-      <TablePagination
-        component="div"
-        count={total}
-        page={Math.max(0, page - 1)}
-        rowsPerPage={pageSize}
-        rowsPerPageOptions={pageSizeOptions}
-        onPageChange={(_, zeroBased) => onPageChange(zeroBased + 1)}
-        onRowsPerPageChange={(event) => onPageSizeChange?.(Number(event.target.value))}
-      />
+      {hidePagination ? null : (
+        <TablePagination
+          component="div"
+          count={total}
+          page={Math.max(0, page - 1)}
+          rowsPerPage={pageSize}
+          rowsPerPageOptions={pageSizeOptions}
+          onPageChange={(_, zeroBased) => onPageChange(zeroBased + 1)}
+          onRowsPerPageChange={(event) => onPageSizeChange?.(Number(event.target.value))}
+        />
+      )}
     </Paper>
   );
 }

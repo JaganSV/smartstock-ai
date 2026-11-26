@@ -23,3 +23,19 @@ export interface PageParams {
   page: number;
   page_size: number;
 }
+
+export type DashboardSummary = Schemas['DashboardSummaryOut'];
+export type SalesSeries = Schemas['SalesSeriesOut'];
+export type SalesPoint = Schemas['SalesPoint'];
+export type RiskDistribution = Schemas['RiskDistributionOut'];
+export type StockoutRiskPage = Schemas['StockoutRiskPage'];
+export type StockoutRiskRow = Schemas['StockoutRiskOut'];
+export type Warehouse = Schemas['WarehouseOut'];
+export type Category = Schemas['CategoryOut'];
+export type RecalculateResult = Schemas['RecalculateOut'];
+
+/** The dashboard's filters (FR-A4); undefined means "All". */
+export interface DashboardFilters {
+  warehouse_id?: number;
+  category_id?: number;
+}
